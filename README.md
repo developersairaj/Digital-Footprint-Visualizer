@@ -171,9 +171,12 @@ This project demonstrates:
 
 ---
 
-# 👨‍💻 Author
+# 👨‍💻 Authors
 
-Sairaj Khanvilkar  
+Sairaj Khanvilkar(Frontend Developer)
+Harsh Agarwal (Backend Developer)
+Pranjal Parab (Assi. Backend Developer)
+Sofiya Salmani (Database Manager)
 GitHub: https://github.com/developersairaj
 
 ---
