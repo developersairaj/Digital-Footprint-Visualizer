@@ -1,7 +1,7 @@
 # NEXUS : FOCUS ZONE TEAM IN ASSOCIATES PRESENTS
 ## 🔐 Digital Footprint Visualizer Code Written & Directed By Tech Builders Team
 
-Digital Footprint Visualizer (NEXUS) is a Digital Intelligence Platform that analyzes a user’s online presence using an email address or phone number to detect possible data breaches, leaks, and exposure risks.
+Digital Footprint Visualizer is a Digital Intelligence Platform that analyzes a user’s online presence using an email address or phone number to detect possible data breaches, leaks, and exposure risks.
 
 It provides a clean dashboard interface with a calculated risk score based on multiple exposure factors.
 
