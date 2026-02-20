@@ -1,0 +1,36 @@
+# Environment variables - NEVER commit API keys!
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# API keys and secrets
+*.key
+secrets/
+config.json
+
+# Database
+*.db
+*.sqlite

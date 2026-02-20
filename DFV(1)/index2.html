@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS — Digital Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --c-bg: #050509;
+  --c-surface: #0c0c14;
+  --c-border: rgba(255,255,255,0.06);
+  --c-border-active: rgba(255,255,255,0.18);
+  --c-text: #e8e8f0;
+  --c-muted: rgba(232,232,240,0.38);
+  --c-accent: #7DF9FF;
+  --c-accent2: #FF3E80;
+  --c-accent3: #F4B942;
+  --c-green: #39FF7E;
+  --c-purple: #A259FF;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --transition: 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--c-bg);
+  color: var(--c-text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+#cursor {
+  position: fixed; width: 12px; height: 12px;
+  background: var(--c-accent); border-radius: 50%;
+  pointer-events: none; z-index: 9999;
+  mix-blend-mode: difference;
+  transition: transform 0.15s ease, width 0.3s ease, height 0.3s ease;
+  transform: translate(-50%, -50%);
+}
+#cursor-trail {
+  position: fixed; width: 40px; height: 40px;
+  border: 1px solid rgba(125,249,255,0.3); border-radius: 50%;
+  pointer-events: none; z-index: 9998;
+  transform: translate(-50%, -50%);
+}
+#bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.scanlines {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(0deg,rgba(0,0,0,0.03) 0px,rgba(0,0,0,0.03) 1px,transparent 1px,transparent 3px);
+}
+
+.shell { position: relative; z-index: 2; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* NAV */
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 56px; border-bottom: 1px solid var(--c-border);
+  backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 100;
+  background: rgba(5,5,9,0.85);
+}
+.nav-brand { display: flex; align-items: center; gap: 14px; cursor: none; }
+.nav-logo {
+  width: 36px; height: 36px; border: 1.5px solid var(--c-accent);
+  border-radius: 8px; display: grid; place-items: center; position: relative; overflow: hidden;
+}
+.nav-logo::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg,rgba(125,249,255,0.15),transparent); }
+.logo-inner { font-size: 16px; color: var(--c-accent); font-family: var(--font-display); letter-spacing: 1px; }
+.nav-name { font-family: var(--font-display); font-size: 22px; letter-spacing: 6px; }
+.nav-links { display: flex; align-items: center; gap: 4px; list-style: none; }
+.nav-links a {
+  color: var(--c-muted); text-decoration: none; font-size: 11px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase; transition: all 0.2s;
+  font-family: var(--font-mono); padding: 8px 18px; border-radius: 4px;
+  border: 1px solid transparent; cursor: none;
+}
+.nav-links a:hover { color: var(--c-accent); border-color: var(--c-border-active); }
+.nav-links a.active { color: var(--c-accent); background: rgba(125,249,255,0.06); border-color: rgba(125,249,255,0.2); }
+.nav-status { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--c-muted); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-green); box-shadow: 0 0 10px var(--c-green); animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+/* PAGE SYSTEM */
+.page { display: none; animation: fadeUp 0.5s ease both; }
+.page.active { display: block; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── HOME PAGE ── */
+.hero {
+  display: grid; grid-template-columns: 1fr 1fr;
+  min-height: calc(100vh - 93px); border-bottom: 1px solid var(--c-border);
+}
+.hero-left {
+  padding: 80px 56px; display: flex; flex-direction: column; justify-content: center;
+  border-right: 1px solid var(--c-border);
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px;
+  border: 1px solid var(--c-border-active); border-radius: 4px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--c-accent);
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 40px; width: fit-content;
+  animation: fadeUp 0.8s both;
+}
+.hero-badge::before { content: '//'; color: var(--c-muted); }
+.hero-heading { font-family: var(--font-display); font-size: clamp(72px,7vw,120px); line-height: 0.9; letter-spacing: 2px; margin-bottom: 32px; animation: fadeUp 0.8s 0.1s both; }
+.hero-heading .line-1 { color: var(--c-text); display: block; }
+.hero-heading .line-2 { display: block; background: linear-gradient(90deg,var(--c-accent),var(--c-purple)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.hero-desc { font-size: 15px; line-height: 1.8; color: var(--c-muted); max-width: 440px; margin-bottom: 56px; animation: fadeUp 0.8s 0.2s both; }
+.search-block { animation: fadeUp 0.8s 0.3s both; }
+.search-label { font-family: var(--font-mono); font-size: 10px; color: var(--c-muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px; }
+.search-frame {
+  position: relative; border: 1px solid var(--c-border-active); border-radius: 6px;
+  background: rgba(255,255,255,0.02); transition: border-color 0.3s, box-shadow 0.3s; overflow: hidden;
+}
+.search-frame::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg,transparent,var(--c-accent),transparent); opacity: 0; transition: opacity 0.3s;
+}
+.search-frame:focus-within { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(125,249,255,0.08),0 20px 60px rgba(0,0,0,0.5); }
+.search-frame:focus-within::before { opacity: 1; }
+.search-row { display: flex; align-items: stretch; }
+.search-prefix {
+  display: flex; align-items: center; padding: 0 20px;
+  font-family: var(--font-mono); font-size: 13px; color: var(--c-accent);
+  border-right: 1px solid var(--c-border); white-space: nowrap;
+}
+#userInput {
+  flex: 1; padding: 22px 24px; background: transparent; border: none;
+  color: var(--c-text); font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.5px; outline: none;
+}
+#userInput::placeholder { color: rgba(232,232,240,0.2); }
+#analyzeBtn {
+  padding: 0 36px; background: var(--c-accent); border: none; color: #050509;
+  font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; cursor: none; transition: var(--transition); white-space: nowrap; overflow: hidden; position: relative;
+}
+#analyzeBtn::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.15); transform: translateX(-101%); transition: transform 0.3s ease; }
+#analyzeBtn:hover::after { transform: translateX(0); }
+#analyzeBtn:active { transform: scale(0.98); }
+.search-hints { display: flex; gap: 20px; margin-top: 14px; flex-wrap: wrap; }
+.hint-tag { font-family: var(--font-mono); font-size: 10px; color: var(--c-muted); border: 1px solid var(--c-border); border-radius: 3px; padding: 4px 10px; cursor: none; transition: all 0.2s; }
+.hint-tag:hover { border-color: var(--c-accent); color: var(--c-accent); }
+.analyzing-state { display: none; align-items: center; gap: 12px; margin-top: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--c-accent); letter-spacing: 1px; }
+.analyzing-state.show { display: flex; }
+.analyzing-dots span { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--c-accent); margin: 0 2px; animation: dotPulse 1.4s infinite both; }
+.analyzing-dots span:nth-child(2){animation-delay:0.2s} .analyzing-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes dotPulse{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+
+.hero-right { position: relative; overflow: hidden; display: flex; flex-direction: column; }
+.monitor-header { padding: 28px 40px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--c-muted); letter-spacing: 2px; }
+.monitor-time { color: var(--c-accent); }
+.activity-feed { flex: 1; padding: 30px 40px; overflow: hidden; position: relative; }
+.activity-feed::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 100px; background: linear-gradient(transparent,var(--c-bg)); pointer-events: none; }
+.feed-item { display: flex; align-items: flex-start; gap: 16px; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.03); animation: feedIn 0.5s ease both; font-family: var(--font-mono); font-size: 11px; }
+@keyframes feedIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.feed-time { color: var(--c-muted); white-space: nowrap; flex-shrink: 0; }
+.feed-type { padding: 2px 8px; border-radius: 2px; font-size: 9px; letter-spacing: 1px; font-weight: 500; flex-shrink: 0; }
+.feed-type.warn{background:rgba(244,185,66,0.15);color:var(--c-accent3)}
+.feed-type.info{background:rgba(125,249,255,0.1);color:var(--c-accent)}
+.feed-type.crit{background:rgba(255,62,128,0.15);color:var(--c-accent2)}
+.feed-type.ok{background:rgba(57,255,126,0.1);color:var(--c-green)}
+.feed-text { color: rgba(232,232,240,0.6); line-height: 1.6; }
+.hexgrid { position: absolute; inset: 0; opacity: 0.035; background-image: url("data:image/svg+xml,%3Csvg width='60' height='52' viewBox='0 0 60 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='30,2 58,17 58,46 30,51 2,46 2,17' fill='none' stroke='%237DF9FF' stroke-width='1'/%3E%3C/svg%3E"); background-size: 60px 52px; pointer-events: none; }
+
+/* Results */
+#results { display: none; padding: 80px 56px; }
+#results.show { display: block; }
+.section-tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--c-accent); margin-bottom: 12px; opacity: 0.7; }
+.section-title { font-family: var(--font-display); font-size: 52px; letter-spacing: 2px; margin-bottom: 60px; line-height: 1; }
+.metrics-row { display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; margin-bottom: 60px; }
+.metric-cell { padding: 50px 40px; border-right: 1px solid var(--c-border); position: relative; overflow: hidden; transition: background 0.3s; }
+.metric-cell:last-child{border-right:none}
+.metric-cell::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent-color,var(--c-accent)); transform: scaleX(0); transform-origin: left; transition: transform 0.6s var(--transition); }
+.metric-cell.animate::before{transform:scaleX(1)}
+.metric-cell:hover{background:rgba(255,255,255,0.015)}
+.metric-icon{font-size:24px;margin-bottom:20px;display:block;opacity:0.7}
+.metric-val{font-family:var(--font-display);font-size:80px;line-height:1;margin-bottom:8px;color:var(--c-text);letter-spacing:1px}
+.metric-unit{font-family:var(--font-mono);font-size:11px;color:var(--c-muted);letter-spacing:3px;text-transform:uppercase}
+.metric-delta{position:absolute;top:24px;right:24px;font-family:var(--font-mono);font-size:10px;padding:4px 10px;border-radius:100px}
+.delta-up{background:rgba(255,62,128,0.12);color:var(--c-accent2)}
+.delta-neutral{background:rgba(125,249,255,0.1);color:var(--c-accent)}
+.analysis-grid{display:grid;grid-template-columns:1fr 480px;gap:24px;margin-bottom:60px;align-items:start}
+.score-panel{border:1px solid var(--c-border);border-radius:8px;overflow:hidden}
+.score-panel-header{padding:28px 36px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;justify-content:space-between}
+.panel-label{font-family:var(--font-mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--c-muted)}
+.panel-badge{font-family:var(--font-mono);font-size:10px;padding:4px 12px;border-radius:2px;border:1px solid}
+.badge-high{border-color:var(--c-accent2);color:var(--c-accent2)}
+.score-vis{padding:50px 36px;display:flex;flex-direction:column;align-items:center}
+.gauge-wrap{position:relative;width:280px;height:160px;margin-bottom:40px}
+.gauge-wrap svg{width:100%;height:auto}
+.gauge-number{position:absolute;bottom:0;left:50%;transform:translateX(-50%);font-family:var(--font-display);font-size:64px;line-height:1;letter-spacing:2px;text-align:center}
+.gauge-label{font-family:var(--font-mono);font-size:10px;letter-spacing:3px;color:var(--c-muted);text-align:center;text-transform:uppercase;margin-bottom:4px}
+.threat-list{width:100%;padding:0 36px 36px}
+.threat-item{display:grid;grid-template-columns:36px 1fr auto;gap:14px;align-items:center;padding:18px 0;border-bottom:1px solid rgba(255,255,255,0.04);transition:all 0.2s;cursor:none}
+.threat-item:hover{padding-left:8px}
+.threat-item:last-child{border-bottom:none}
+.ti-emoji{font-size:18px;line-height:1}
+.ti-name{font-size:12px;font-weight:600;color:rgba(232,232,240,0.8);margin-bottom:8px;letter-spacing:0.3px}
+.ti-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:10px;overflow:hidden}
+.ti-fill{height:100%;border-radius:10px;width:0%;transition:width 1.5s cubic-bezier(0.16,1,0.3,1)}
+.ti-pct{font-family:var(--font-mono);font-size:12px;color:var(--c-muted);text-align:right;min-width:36px}
+.heatmap-panel{border:1px solid var(--c-border);border-radius:8px;overflow:hidden;height:100%}
+.heatmap-header{padding:28px 36px;border-bottom:1px solid var(--c-border)}
+.heatmap-grid{padding:36px;display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.heatmap-cell{aspect-ratio:1;border-radius:3px;background:rgba(125,249,255,0.04);transition:all 0.3s;cursor:none;position:relative}
+.heatmap-cell::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--c-surface);border:1px solid var(--c-border-active);color:var(--c-text);font-family:var(--font-mono);font-size:9px;padding:4px 8px;border-radius:3px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity 0.2s;z-index:10}
+.heatmap-cell:hover::after{opacity:1}
+.heatmap-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:0 36px;font-family:var(--font-mono);font-size:9px;color:var(--c-muted);text-align:center;margin-bottom:8px}
+.heatmap-legend{padding:20px 36px 36px;display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:9px;color:var(--c-muted)}
+.legend-cells{display:flex;gap:4px}
+.legend-cell{width:12px;height:12px;border-radius:2px}
+.lower-grid{display:grid;grid-template-columns:1fr 1fr 340px;gap:24px;margin-bottom:60px}
+.insight-panel{border:1px solid var(--c-border);border-radius:8px;overflow:hidden}
+.ip-header{padding:24px 32px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:14px}
+.ip-icon{width:32px;height:32px;border:1px solid var(--c-border-active);border-radius:6px;display:grid;place-items:center;font-size:14px}
+.ip-title{font-size:13px;font-weight:700;letter-spacing:0.3px}
+.ip-body{padding:24px 32px}
+.ip-item{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.04);transition:all 0.2s;cursor:none}
+.ip-item:last-child{border-bottom:none}
+.ip-item:hover{padding-left:6px}
+.ip-num{font-family:var(--font-mono);font-size:10px;color:var(--c-accent);opacity:0.5;flex-shrink:0;padding-top:2px}
+.ip-text{font-size:12px;line-height:1.7;color:rgba(232,232,240,0.65)}
+.ip-text strong{color:var(--c-text)}
+.side-panel{border:1px solid var(--c-border);border-radius:8px;overflow:hidden}
+.sp-metric{padding:28px 28px;border-bottom:1px solid var(--c-border);position:relative}
+.sp-m-val{font-family:var(--font-display);font-size:52px;line-height:1;margin-bottom:6px}
+.sp-m-label{font-family:var(--font-mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--c-muted)}
+.sp-m-bar{position:absolute;left:0;bottom:0;height:2px;width:0%;background:var(--bar-color,var(--c-accent));transition:width 1.5s var(--transition)}
+.cta-section{border:1px solid var(--c-border);border-radius:8px;overflow:hidden;position:relative}
+.cta-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(125,249,255,0.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 50%,rgba(162,89,255,0.06) 0%,transparent 60%);pointer-events:none}
+.cta-inner{position:relative;z-index:1;padding:80px 60px;text-align:center}
+.cta-eyebrow{font-family:var(--font-mono);font-size:10px;letter-spacing:4px;color:var(--c-accent);text-transform:uppercase;margin-bottom:24px}
+.cta-heading{font-family:var(--font-display);font-size:64px;line-height:0.95;letter-spacing:2px;margin-bottom:20px}
+.cta-sub{font-size:14px;color:var(--c-muted);line-height:1.8;max-width:480px;margin:0 auto 48px}
+.cta-buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.btn{padding:16px 36px;border-radius:4px;font-family:var(--font-body);font-weight:700;font-size:11px;letter-spacing:3px;text-transform:uppercase;border:1px solid;cursor:none;transition:var(--transition);position:relative;overflow:hidden}
+.btn-fill{background:var(--c-accent);border-color:var(--c-accent);color:#050509}
+.btn-fill:hover{background:transparent;color:var(--c-accent);box-shadow:0 0 40px rgba(125,249,255,0.2)}
+.btn-outline{background:transparent;border-color:var(--c-border-active);color:var(--c-muted)}
+.btn-outline:hover{border-color:var(--c-accent);color:var(--c-accent)}
+
+/* ═══════════════════════════════════════
+   DASHBOARD PAGE
+═══════════════════════════════════════ */
+.page-header {
+  padding: 60px 56px 40px;
+  border-bottom: 1px solid var(--c-border);
+}
+.page-eyebrow { font-family: var(--font-mono); font-size: 10px; letter-spacing: 4px; color: var(--c-accent); text-transform: uppercase; margin-bottom: 12px; opacity: 0.7; }
+.page-title { font-family: var(--font-display); font-size: 64px; letter-spacing: 2px; line-height: 1; margin-bottom: 12px; }
+.page-sub { font-size: 14px; color: var(--c-muted); line-height: 1.6; max-width: 600px; }
+
+.dash-body { padding: 48px 56px; }
+
+/* KPI strip */
+.kpi-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--c-border); border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; margin-bottom: 40px; }
+.kpi-card { background: var(--c-bg); padding: 32px 28px; position: relative; overflow: hidden; transition: background 0.3s; }
+.kpi-card:hover { background: rgba(125,249,255,0.02); }
+.kpi-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--kpi-color, var(--c-accent)); transform: scaleX(0); transform-origin: left; transition: transform 0.8s ease; }
+.kpi-card.loaded::after { transform: scaleX(1); }
+.kpi-val { font-family: var(--font-display); font-size: 48px; line-height: 1; margin-bottom: 6px; color: var(--kpi-color, var(--c-text)); }
+.kpi-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--c-muted); margin-bottom: 14px; }
+.kpi-trend { font-family: var(--font-mono); font-size: 10px; }
+.trend-up { color: var(--c-accent2); }
+.trend-ok { color: var(--c-green); }
+
+/* Dash grid */
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+.dash-card { border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; }
+.dash-card-header { padding: 22px 28px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; }
+.dash-card-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--c-muted); }
+.dash-card-badge { font-family: var(--font-mono); font-size: 9px; padding: 3px 10px; border-radius: 100px; }
+.badge-live { background: rgba(57,255,126,0.1); color: var(--c-green); }
+.badge-warn { background: rgba(244,185,66,0.1); color: var(--c-accent3); }
+.dash-card-body { padding: 28px; }
+
+/* Scan history table */
+.scan-table { width: 100%; border-collapse: collapse; }
+.scan-table th { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--c-muted); padding: 0 0 16px; text-align: left; border-bottom: 1px solid var(--c-border); }
+.scan-table td { padding: 14px 0; font-family: var(--font-mono); font-size: 11px; border-bottom: 1px solid rgba(255,255,255,0.03); color: rgba(232,232,240,0.7); vertical-align: middle; }
+.scan-table tr:last-child td { border-bottom: none; }
+.risk-pill { padding: 3px 10px; border-radius: 100px; font-size: 9px; letter-spacing: 1px; }
+.risk-high { background: rgba(255,62,128,0.12); color: var(--c-accent2); }
+.risk-med { background: rgba(244,185,66,0.1); color: var(--c-accent3); }
+.risk-low { background: rgba(57,255,126,0.1); color: var(--c-green); }
+
+/* Threat radar */
+.radar-chart { display: flex; justify-content: center; padding: 20px 0; }
+
+/* Alert list */
+.alert-list { display: flex; flex-direction: column; gap: 12px; }
+.alert-item { display: flex; gap: 14px; padding: 16px; background: rgba(255,255,255,0.015); border-radius: 6px; border-left: 3px solid; transition: all 0.2s; cursor: none; }
+.alert-item:hover { transform: translateX(4px); }
+.alert-item.crit { border-color: var(--c-accent2); }
+.alert-item.warn { border-color: var(--c-accent3); }
+.alert-item.ok { border-color: var(--c-green); }
+.alert-icon { font-size: 18px; flex-shrink: 0; }
+.alert-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.alert-desc { font-family: var(--font-mono); font-size: 10px; color: var(--c-muted); line-height: 1.5; }
+.alert-time { font-family: var(--font-mono); font-size: 9px; color: var(--c-muted); margin-top: 6px; }
+
+/* Tasks section */
+.tasks-section { margin-bottom: 40px; }
+.tasks-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.tasks-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.task-card { border: 1px solid var(--c-border); border-radius: 8px; padding: 24px; transition: all 0.3s; cursor: none; position: relative; overflow: hidden; }
+.task-card:hover { border-color: var(--c-accent); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
+.task-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--task-color, var(--c-accent)); transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease; }
+.task-card:hover::before { transform: scaleX(1); }
+.task-priority { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+.task-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.task-desc { font-size: 12px; color: var(--c-muted); line-height: 1.6; margin-bottom: 16px; }
+.task-action { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--c-accent); transition: gap 0.2s; }
+.task-card:hover .task-action { gap: 12px; }
+
+/* ═══════════════════════════════════════
+   INTELLIGENCE PAGE
+═══════════════════════════════════════ */
+.intel-body { padding: 48px 56px; }
+
+/* OSINT Categories */
+.intel-categories { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-bottom: 48px; }
+.intel-cat {
+  border: 1px solid var(--c-border); border-radius: 8px; padding: 36px 28px;
+  transition: all 0.4s; cursor: none; position: relative; overflow: hidden;
+}
+.intel-cat::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at top left, var(--cat-glow, rgba(125,249,255,0.06)), transparent 70%); opacity: 0; transition: opacity 0.4s; }
+.intel-cat:hover { border-color: var(--c-accent); transform: translateY(-6px); box-shadow: 0 24px 60px rgba(0,0,0,0.5); }
+.intel-cat:hover::before { opacity: 1; }
+.cat-icon { font-size: 36px; margin-bottom: 20px; display: block; }
+.cat-title { font-family: var(--font-display); font-size: 28px; letter-spacing: 1px; margin-bottom: 10px; }
+.cat-desc { font-size: 12px; color: var(--c-muted); line-height: 1.7; margin-bottom: 20px; }
+.cat-count { font-family: var(--font-mono); font-size: 10px; color: var(--c-accent); letter-spacing: 2px; }
+
+/* Investigation tools */
+.intel-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px; }
+.tool-panel { border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; }
+.tool-panel-header { padding: 22px 28px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; gap: 14px; }
+.tool-icon { width: 36px; height: 36px; border: 1px solid var(--c-border-active); border-radius: 8px; display: grid; place-items: center; font-size: 16px; }
+.tool-name { font-size: 14px; font-weight: 700; }
+.tool-body { padding: 28px; }
+.tool-input-row { display: flex; gap: 12px; margin-bottom: 20px; }
+.tool-input {
+  flex: 1; padding: 12px 16px; background: rgba(255,255,255,0.02);
+  border: 1px solid var(--c-border); border-radius: 6px; color: var(--c-text);
+  font-family: var(--font-mono); font-size: 12px; outline: none; transition: border-color 0.2s; cursor: none;
+}
+.tool-input:focus { border-color: var(--c-accent); }
+.tool-input::placeholder { color: var(--c-muted); }
+.tool-btn {
+  padding: 12px 24px; background: transparent; border: 1px solid var(--c-accent);
+  color: var(--c-accent); font-family: var(--font-mono); font-size: 11px; letter-spacing: 2px;
+  border-radius: 4px; cursor: none; transition: all 0.2s; white-space: nowrap;
+}
+.tool-btn:hover { background: rgba(125,249,255,0.08); }
+.tool-result-box { padding: 16px; background: rgba(125,249,255,0.03); border: 1px solid rgba(125,249,255,0.08); border-radius: 6px; font-family: var(--font-mono); font-size: 11px; line-height: 1.8; color: var(--c-muted); min-height: 100px; }
+
+/* Threat intelligence feed */
+.threat-intel-feed { border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; margin-bottom: 48px; }
+.tif-header { padding: 22px 28px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; }
+.tif-filters { display: flex; gap: 8px; }
+.tif-filter { font-family: var(--font-mono); font-size: 10px; padding: 5px 14px; border-radius: 3px; border: 1px solid var(--c-border); color: var(--c-muted); cursor: none; transition: all 0.2s; }
+.tif-filter:hover, .tif-filter.active { border-color: var(--c-accent); color: var(--c-accent); background: rgba(125,249,255,0.05); }
+.tif-body { padding: 28px; display: flex; flex-direction: column; gap: 16px; }
+.tif-item { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: start; padding: 20px; background: rgba(255,255,255,0.015); border-radius: 6px; border: 1px solid var(--c-border); transition: all 0.2s; cursor: none; }
+.tif-item:hover { border-color: var(--c-border-active); transform: translateX(4px); }
+.tif-sev { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.sev-crit { background: var(--c-accent2); box-shadow: 0 0 8px var(--c-accent2); }
+.sev-high { background: var(--c-accent3); box-shadow: 0 0 8px var(--c-accent3); }
+.sev-med { background: var(--c-accent); box-shadow: 0 0 8px var(--c-accent); }
+.tif-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.tif-desc { font-family: var(--font-mono); font-size: 11px; color: var(--c-muted); line-height: 1.6; }
+.tif-tags { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.tif-tag { font-family: var(--font-mono); font-size: 9px; padding: 2px 8px; border-radius: 2px; background: rgba(255,255,255,0.04); color: var(--c-muted); border: 1px solid var(--c-border); }
+.tif-date { font-family: var(--font-mono); font-size: 10px; color: var(--c-muted); white-space: nowrap; }
+
+/* ═══════════════════════════════════════
+   API PAGE
+═══════════════════════════════════════ */
+.api-body { padding: 48px 56px; }
+.api-grid { display: grid; grid-template-columns: 280px 1fr; gap: 32px; }
+.api-sidebar { position: sticky; top: 110px; height: fit-content; }
+.api-nav-section { margin-bottom: 32px; }
+.api-nav-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--c-muted); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--c-border); }
+.api-nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--c-muted); cursor: none; transition: all 0.2s; margin-bottom: 2px; }
+.api-nav-link:hover { color: var(--c-text); background: rgba(255,255,255,0.03); }
+.api-nav-link.active { color: var(--c-accent); background: rgba(125,249,255,0.06); }
+.method-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.method-get { background: var(--c-green); }
+.method-post { background: var(--c-accent); }
+.method-del { background: var(--c-accent2); }
+.api-content { min-width: 0; }
+
+/* Key stats */
+.api-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 40px; }
+.api-stat { border: 1px solid var(--c-border); border-radius: 8px; padding: 24px; text-align: center; }
+.api-stat-val { font-family: var(--font-display); font-size: 40px; color: var(--c-accent); margin-bottom: 6px; }
+.api-stat-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--c-muted); }
+
+/* Endpoint cards */
+.endpoint-section { margin-bottom: 48px; }
+.endpoint-section-title { font-family: var(--font-display); font-size: 32px; letter-spacing: 1px; margin-bottom: 20px; }
+.endpoint-card { border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+.endpoint-header { padding: 18px 24px; display: flex; align-items: center; gap: 16px; cursor: none; transition: background 0.2s; }
+.endpoint-header:hover { background: rgba(255,255,255,0.02); }
+.method-badge { font-family: var(--font-mono); font-size: 10px; font-weight: 500; padding: 4px 12px; border-radius: 4px; letter-spacing: 1px; min-width: 52px; text-align: center; }
+.mb-get { background: rgba(57,255,126,0.1); color: var(--c-green); border: 1px solid rgba(57,255,126,0.2); }
+.mb-post { background: rgba(125,249,255,0.1); color: var(--c-accent); border: 1px solid rgba(125,249,255,0.2); }
+.mb-del { background: rgba(255,62,128,0.1); color: var(--c-accent2); border: 1px solid rgba(255,62,128,0.2); }
+.endpoint-path { font-family: var(--font-mono); font-size: 13px; color: var(--c-text); flex: 1; }
+.endpoint-desc-short { font-family: var(--font-mono); font-size: 11px; color: var(--c-muted); }
+.endpoint-expand { padding: 24px; border-top: 1px solid var(--c-border); background: rgba(0,0,0,0.2); }
+.code-block { background: #070710; border: 1px solid var(--c-border); border-radius: 6px; padding: 20px 24px; font-family: var(--font-mono); font-size: 12px; line-height: 1.8; color: rgba(232,232,240,0.8); overflow-x: auto; margin-bottom: 16px; position: relative; }
+.code-block .code-lang { position: absolute; top: 12px; right: 16px; font-size: 9px; letter-spacing: 2px; color: var(--c-muted); text-transform: uppercase; }
+.code-key { color: var(--c-accent2); }
+.code-str { color: var(--c-green); }
+.code-num { color: var(--c-accent3); }
+.code-comment { color: rgba(232,232,240,0.25); }
+.param-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+.param-table th { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--c-muted); padding: 0 0 12px; text-align: left; border-bottom: 1px solid var(--c-border); }
+.param-table td { padding: 12px 0; font-family: var(--font-mono); font-size: 11px; border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: top; }
+.param-table tr:last-child td { border-bottom: none; }
+.param-name { color: var(--c-accent); }
+.param-type { color: var(--c-accent3); }
+.param-req { color: var(--c-accent2); font-size: 9px; }
+.param-opt { color: var(--c-muted); font-size: 9px; }
+.param-desc { color: rgba(232,232,240,0.6); line-height: 1.6; }
+
+/* API Key section */
+.api-key-section { border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; margin-bottom: 40px; }
+.aks-header { padding: 22px 28px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; justify-content: space-between; }
+.aks-body { padding: 28px; }
+.key-display { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.key-value { flex: 1; padding: 14px 18px; background: rgba(0,0,0,0.3); border: 1px solid var(--c-border); border-radius: 6px; font-family: var(--font-mono); font-size: 13px; color: var(--c-accent); letter-spacing: 2px; }
+.key-copy-btn { padding: 14px 22px; border: 1px solid var(--c-border-active); background: transparent; color: var(--c-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px; border-radius: 6px; cursor: none; transition: all 0.2s; }
+.key-copy-btn:hover { border-color: var(--c-accent); color: var(--c-accent); }
+.key-limits { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.key-limit { padding: 16px; background: rgba(255,255,255,0.015); border-radius: 6px; border: 1px solid var(--c-border); }
+.kl-val { font-family: var(--font-display); font-size: 28px; margin-bottom: 4px; }
+.kl-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--c-muted); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 32px; right: 32px; display: flex; align-items: center; gap: 16px; padding: 18px 24px; background: var(--c-surface); border: 1px solid var(--c-border-active); border-radius: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--c-text); z-index: 9990; transform: translateY(120px); opacity: 0; transition: all 0.4s cubic-bezier(0.16,1,0.3,1); max-width: 420px; box-shadow: 0 24px 80px rgba(0,0,0,0.6); }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-icon { font-size: 16px; flex-shrink: 0; }
+.toast-bar { position: absolute; bottom: 0; left: 0; height: 2px; width: 100%; background: var(--c-accent); animation: toastBar 4s linear forwards; border-radius: 0 0 6px 6px; transform-origin: left; }
+@keyframes toastBar { from{transform:scaleX(1)} to{transform:scaleX(0)} }
+
+@media(max-width:1100px){
+  .hero{grid-template-columns:1fr}.hero-right{min-height:300px}
+  .analysis-grid{grid-template-columns:1fr}.lower-grid{grid-template-columns:1fr}
+  nav{padding:20px 24px}.nav-links{display:none}
+  #results{padding:48px 24px}.hero-left{padding:60px 24px}
+  .metrics-row{grid-template-columns:1fr}.metric-cell{border-right:none;border-bottom:1px solid var(--c-border)}
+  .dash-body,.intel-body,.api-body{padding:32px 24px}
+  .page-header{padding:40px 24px}
+  .kpi-strip{grid-template-columns:1fr 1fr}
+  .dash-grid,.intel-tools{grid-template-columns:1fr}
+  .intel-categories{grid-template-columns:1fr}
+  .api-grid{grid-template-columns:1fr}.api-sidebar{position:static}
+  .tasks-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+<div class="scanlines"></div>
+<canvas id="bg-canvas"></canvas>
+
+<div class="shell">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand" onclick="navigate('home')">
+    <div class="nav-logo"><span class="logo-inner">NX</span></div>
+    <span class="nav-name">NEXUS : FOCUS ZONE TEAM IN ASSOCIATES PRESENT</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#" class="nav-link" data-page="dashboard" onclick="navigate('dashboard');return false;">Dashboard</a></li>
+    <li><a href="#" class="nav-link" data-page="intelligence" onclick="navigate('intelligence');return false;">Intelligence</a></li>
+    <li><a href="#" class="nav-link" data-page="home" onclick="navigate('home');return false;">Scanner</a></li>
+    <li><a href="#" class="nav-link" data-page="api" onclick="navigate('api');return false;">API</a></li>
+  </ul>
+  <div class="nav-status">
+    <div class="status-dot"></div>
+    <span>SYSTEMS OPERATIONAL</span>
+  </div>
+</nav>
+
+<!-- ══════════ HOME / SCANNER ══════════ -->
+<div class="page active" id="page-home">
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-badge">Digital Footprints Visualizer Code Written & Directed By Tech Builders Team</div>
+      <h1 class="hero-heading">
+        <span class="line-1">PROTECT</span>
+        <span class="line-2">YOUR</span>
+        <span class="line-1">IDENTITY</span>
+      </h1>
+      <p class="hero-desc">Enterprise-grade OSINT analysis engine. Surface hidden exposures, map your digital footprint, and neutralize privacy threats across the entire web ecosystem.</p>
+      <div class="search-block">
+        <div class="search-label">// Target Identifier</div>
+        <div class="search-frame">
+          <div class="search-row">
+            <div class="search-prefix">nexus@scan:~$</div>
+            <input type="text" id="userInput" placeholder="email@domain.com or @username" autocomplete="off" spellcheck="false">
+            <button id="analyzeBtn">Execute</button>
+          </div>
+        </div>
+        <div class="search-hints">
+          <span class="hint-tag" onclick="fillDemo('john.doe@example.com')">john.doe@example.com</span>
+          <span class="hint-tag" onclick="fillDemo('@jdoe_nyc')">@jdoe_nyc</span>
+          <span class="hint-tag" onclick="fillDemo('jane_smith')">jane_smith</span>
+        </div>
+        <div class="analyzing-state" id="analyzingState">
+          <div class="analyzing-dots"><span></span><span></span><span></span></div>
+          <span>Scanning across 140+ data sources...</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hexgrid"></div>
+      <div class="monitor-header">
+        <span class="monitor-title">// Live Threat Feed</span>
+        <span class="monitor-time" id="liveTime">--:--:--</span>
+      </div>
+      <div class="activity-feed" id="activityFeed"></div>
+    </div>
+  </section>
+
+  <div id="results">
+    <div class="section-tag">// Analysis Complete</div>
+    <div class="section-title">Risk Report</div>
+    <div class="metrics-row">
+      <div class="metric-cell" style="--accent-color:var(--c-accent2)">
+        <div class="metric-delta delta-up">↑ HIGH</div>
+        <span class="metric-icon">⚠</span>
+        <div class="metric-val" id="m-platforms">0</div>
+        <div class="metric-unit">Platforms Detected</div>
+      </div>
+      <div class="metric-cell" style="--accent-color:var(--c-accent3)">
+        <div class="metric-delta delta-up">↑ CRITICAL</div>
+        <span class="metric-icon">🔓</span>
+        <div class="metric-val" id="m-exposures">0</div>
+        <div class="metric-unit">Data Exposures</div>
+      </div>
+      <div class="metric-cell" style="--accent-color:var(--c-green)">
+        <div class="metric-delta delta-neutral">ACTIVE</div>
+        <span class="metric-icon">🛡</span>
+        <div class="metric-val" id="m-threat">0</div>
+        <div class="metric-unit">Threat Index</div>
+      </div>
+    </div>
+    <div class="analysis-grid">
+      <div class="score-panel">
+        <div class="score-panel-header">
+          <span class="panel-label">// Privacy Risk Score</span>
+          <span class="panel-badge badge-high" id="riskBadge">HIGH RISK</span>
+        </div>
+        <div class="score-vis">
+          <div class="gauge-label">RISK LEVEL</div>
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 280 160" fill="none">
+              <defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#39FF7E"/><stop offset="50%" stop-color="#F4B942"/><stop offset="100%" stop-color="#FF3E80"/></linearGradient></defs>
+              <path d="M 20 150 A 120 120 0 0 1 260 150" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round" fill="none"/>
+              <path id="gaugePath" d="M 20 150 A 120 120 0 0 1 260 150" stroke="url(#g1)" stroke-width="14" stroke-linecap="round" fill="none" stroke-dasharray="380" stroke-dashoffset="380"/>
+              <line x1="20" y1="150" x2="20" y2="136" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+              <line x1="140" y1="30" x2="140" y2="16" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+              <line x1="260" y1="150" x2="260" y2="136" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+              <text x="14" y="168" fill="rgba(255,255,255,0.3)" font-size="9" font-family="DM Mono" text-anchor="middle">LOW</text>
+              <text x="140" y="10" fill="rgba(255,255,255,0.3)" font-size="9" font-family="DM Mono" text-anchor="middle">MED</text>
+              <text x="266" y="168" fill="rgba(255,255,255,0.3)" font-size="9" font-family="DM Mono" text-anchor="middle">HIGH</text>
+            </svg>
+            <div class="gauge-number" id="gaugeNum">—</div>
+          </div>
+        </div>
+        <div class="threat-list" id="threatList"></div>
+      </div>
+      <div class="heatmap-panel">
+        <div class="heatmap-header"><div class="panel-label">// Exposure Activity — Last 8 Weeks</div></div>
+        <div class="heatmap-days"><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div></div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+        <div class="heatmap-legend">
+          <span>Less</span>
+          <div class="legend-cells">
+            <div class="legend-cell" style="background:rgba(125,249,255,0.04)"></div>
+            <div class="legend-cell" style="background:rgba(125,249,255,0.15)"></div>
+            <div class="legend-cell" style="background:rgba(125,249,255,0.35)"></div>
+            <div class="legend-cell" style="background:rgba(125,249,255,0.65)"></div>
+            <div class="legend-cell" style="background:rgba(125,249,255,0.9)"></div>
+          </div>
+          <span>More</span>
+        </div>
+      </div>
+    </div>
+    <div class="lower-grid">
+      <div class="insight-panel">
+        <div class="ip-header"><div class="ip-icon">💡</div><div class="ip-title">Security Recommendations</div></div>
+        <div class="ip-body" id="secList"></div>
+        <!-- Password Safety Analysis -->
+        <div class="ip-header" style="margin-top: 20px;"><div class="ip-icon">🔐</div><div class="ip-title">Password Safety Analysis</div></div>
+        <div class="ip-body" id="passwordSafety" style="margin-top: 10px;"></div>
+        <!-- Phone Privacy Analysis -->
+        <div class="ip-header" style="margin-top: 20px;"><div class="ip-icon">📱</div><div class="ip-title">Phone Privacy Analysis</div></div>
+        <div class="ip-body" id="phoneSafety" style="margin-top: 10px;"></div>
+      </div>
+      <div class="insight-panel">
+        <div class="ip-header"><div class="ip-icon">🎯</div><div class="ip-title">Priority Action Items</div></div>
+        <div class="ip-body" id="actList"></div>
+      </div>
+      <div class="side-panel">
+        <div class="sp-metric" style="--bar-color:var(--c-accent2)"><div class="sp-m-val" style="color:var(--c-accent2)" id="s-darkweb">—</div><div class="sp-m-label">Dark Web Mentions</div><div class="sp-m-bar" id="sb-1"></div></div>
+        <div class="sp-metric" style="--bar-color:var(--c-accent3)"><div class="sp-m-val" style="color:var(--c-accent3)" id="s-brokers">—</div><div class="sp-m-label">Data Broker Listings</div><div class="sp-m-bar" id="sb-2"></div></div>
+        <div class="sp-metric" style="--bar-color:var(--c-green)"><div class="sp-m-val" style="color:var(--c-green)" id="s-indexed">—</div><div class="sp-m-label">Indexed Pages</div><div class="sp-m-bar" id="sb-3"></div></div>
+        <div class="sp-metric" style="--bar-color:var(--c-purple)"><div class="sp-m-val" style="color:var(--c-purple)" id="s-score">—</div><div class="sp-m-label">Identity Score</div><div class="sp-m-bar" id="sb-4"></div></div>
+      </div>
+    </div>
+    <div class="cta-section">
+      <div class="cta-bg"></div>
+      <div class="cta-inner">
+        <div class="cta-eyebrow">// Next Steps</div>
+        <h2 class="cta-heading">TAKE<br>CONTROL</h2>
+        <p class="cta-sub">Your digital footprint is larger than you think. Let our certified security team remediate your exposure and lock down your identity.</p>
+        <div class="cta-buttons">
+          <button class="btn btn-fill" id="downloadBtn">Download Full Report</button>
+          <button class="btn btn-outline" id="scheduleBtn">Schedule Audit</button>
+          <button class="btn btn-outline" id="contactBtn">Talk to Expert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ DASHBOARD PAGE ══════════ -->
+<div class="page" id="page-dashboard">
+  <div class="page-header">
+    <div class="page-eyebrow">// Control Center</div>
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub">Monitor your organization's security posture, active scans, recent threats, and pending remediation tasks in real time.</div>
+  </div>
+  <div class="dash-body">
+
+    <!-- KPI Strip -->
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--kpi-color:var(--c-accent2)">
+        <div class="kpi-label">Total Scans Run</div>
+        <div class="kpi-val">2,847</div>
+        <div class="kpi-trend"><span class="trend-up">↑ 18%</span> this month</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--c-accent3)">
+        <div class="kpi-label">Active Threats</div>
+        <div class="kpi-val">134</div>
+        <div class="kpi-trend"><span class="trend-up">↑ 6</span> since yesterday</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--c-green)">
+        <div class="kpi-label">Resolved Issues</div>
+        <div class="kpi-val">981</div>
+        <div class="kpi-trend"><span class="trend-ok">✓ 42</span> resolved today</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--c-purple)">
+        <div class="kpi-label">Avg Risk Score</div>
+        <div class="kpi-val">73</div>
+        <div class="kpi-trend"><span class="trend-up">↑ 4pts</span> vs last week</div>
+      </div>
+    </div>
+
+    <!-- Dash Grid -->
+    <div class="dash-grid">
+      <!-- Scan History -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-title">// Recent Scans</span>
+          <span class="dash-card-badge badge-live">● LIVE</span>
+        </div>
+        <div class="dash-card-body">
+          <table class="scan-table">
+            <thead><tr><th>Target</th><th>Type</th><th>Risk</th><th>Platforms</th><th>Time</th></tr></thead>
+            <tbody>
+              <tr><td>j.doe@corp.io</td><td>Email</td><td><span class="risk-pill risk-high">HIGH</span></td><td>48</td><td>2m ago</td></tr>
+              <tr><td>@sarah_k</td><td>Username</td><td><span class="risk-pill risk-med">MED</span></td><td>31</td><td>15m ago</td></tr>
+              <tr><td>mike.chen@gmail</td><td>Email</td><td><span class="risk-pill risk-high">HIGH</span></td><td>52</td><td>1h ago</td></tr>
+              <tr><td>@techcorp_ceo</td><td>Username</td><td><span class="risk-pill risk-low">LOW</span></td><td>19</td><td>3h ago</td></tr>
+              <tr><td>anna.smith@co</td><td>Email</td><td><span class="risk-pill risk-med">MED</span></td><td>27</td><td>5h ago</td></tr>
+              <tr><td>@devguru99</td><td>Username</td><td><span class="risk-pill risk-high">HIGH</span></td><td>61</td><td>8h ago</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Live Alerts -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-title">// Live Alerts</span>
+          <span class="dash-card-badge badge-warn">3 UNREAD</span>
+        </div>
+        <div class="dash-card-body">
+          <div class="alert-list">
+            <div class="alert-item crit">
+              <div class="alert-icon">🚨</div>
+              <div class="alert-body">
+                <div class="alert-title">Critical Breach Detected</div>
+                <div class="alert-desc">Email j.doe@corp.io found in fresh credential dump — 890K records. Password hash exposed (MD5).</div>
+                <div class="alert-time">2 minutes ago · Breach Monitor</div>
+              </div>
+            </div>
+            <div class="alert-item warn">
+              <div class="alert-icon">⚠️</div>
+              <div class="alert-body">
+                <div class="alert-title">New Data Broker Listing</div>
+                <div class="alert-desc">Target profile appeared on Spokeo and WhitePages. Home address, phone number, and relatives visible.</div>
+                <div class="alert-time">34 minutes ago · Broker Monitor</div>
+              </div>
+            </div>
+            <div class="alert-item warn">
+              <div class="alert-icon">🔍</div>
+              <div class="alert-body">
+                <div class="alert-title">Social Graph Expansion</div>
+                <div class="alert-desc">LinkedIn profile scraped 12 times in the last 24h. 3 new connections flagged as high-risk actors.</div>
+                <div class="alert-time">1 hour ago · OSINT Engine</div>
+              </div>
+            </div>
+            <div class="alert-item ok">
+              <div class="alert-icon">✅</div>
+              <div class="alert-body">
+                <div class="alert-title">Remediation Complete</div>
+                <div class="alert-desc">Successfully removed profile from 14 data brokers. Risk score reduced by 12 points.</div>
+                <div class="alert-time">3 hours ago · Auto-Remediation</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tasks -->
+    <div class="tasks-section">
+      <div class="tasks-header">
+        <div>
+          <div class="page-eyebrow" style="margin-bottom:6px">// Pending Tasks</div>
+          <div style="font-family:var(--font-display);font-size:32px;letter-spacing:1px">What You Should Do Now</div>
+        </div>
+      </div>
+      <div class="tasks-grid">
+        <div class="task-card" style="--task-color:var(--c-accent2)">
+          <div class="task-priority" style="color:var(--c-accent2)">🔴 CRITICAL PRIORITY</div>
+          <div class="task-title">Rotate Exposed Credentials</div>
+          <div class="task-desc">3 accounts have password hashes in known breach databases. Change passwords immediately and enable MFA on all affected logins.</div>
+          <div class="task-action">Begin Password Rotation →</div>
+        </div>
+        <div class="task-card" style="--task-color:var(--c-accent3)">
+          <div class="task-priority" style="color:var(--c-accent3)">🟡 HIGH PRIORITY</div>
+          <div class="task-title">Submit Data Broker Opt-Outs</div>
+          <div class="task-desc">Your profile is listed on 47 data broker sites. Use the automated opt-out tool to request removal from all identified brokers.</div>
+          <div class="task-action">Launch Opt-Out Tool →</div>
+        </div>
+        <div class="task-card" style="--task-color:var(--c-accent)">
+          <div class="task-priority" style="color:var(--c-accent)">🔵 MEDIUM PRIORITY</div>
+          <div class="task-title">Audit Social Media Privacy</div>
+          <div class="task-desc">12 social accounts have public visibility settings exposing location, workplace, and relationship data. Update privacy controls.</div>
+          <div class="task-action">Open Privacy Checklist →</div>
+        </div>
+        <div class="task-card" style="--task-color:var(--c-purple)">
+          <div class="task-priority" style="color:var(--c-purple)">🟣 MEDIUM PRIORITY</div>
+          <div class="task-title">Enable Dark Web Monitoring</div>
+          <div class="task-desc">Set up continuous monitoring for your email and username across dark web forums, paste sites, and marketplace listings.</div>
+          <div class="task-action">Configure Monitoring →</div>
+        </div>
+        <div class="task-card" style="--task-color:var(--c-green)">
+          <div class="task-priority" style="color:var(--c-green)">🟢 LOW PRIORITY</div>
+          <div class="task-title">Deactivate Dormant Accounts</div>
+          <div class="task-desc">19 accounts with no recent activity found. Each dormant account is a potential attack vector. Review and close unused profiles.</div>
+          <div class="task-action">View Account List →</div>
+        </div>
+        <div class="task-card" style="--task-color:var(--c-accent3)">
+          <div class="task-priority" style="color:var(--c-accent3)">🟡 HIGH PRIORITY</div>
+          <div class="task-title">Review App Permissions</div>
+          <div class="task-desc">38 third-party apps have OAuth access to your accounts. Audit and revoke permissions from apps you no longer actively use.</div>
+          <div class="task-action">Audit Permissions →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ INTELLIGENCE PAGE ══════════ -->
+<div class="page" id="page-intelligence">
+  <div class="page-header">
+    <div class="page-eyebrow">// OSINT Engine</div>
+    <div class="page-title">Intelligence</div>
+    <div class="page-sub">Run targeted open-source intelligence investigations. Discover connections, surface exposures, and map digital footprints across the full web surface.</div>
+  </div>
+  <div class="intel-body">
+
+    <!-- Categories -->
+    <div class="intel-categories">
+      <div class="intel-cat" style="--cat-glow:rgba(255,62,128,0.08)">
+        <span class="cat-icon">👤</span>
+        <div class="cat-title">Identity Mapping</div>
+        <div class="cat-desc">Cross-reference usernames, emails, and phone numbers across 200+ platforms to build a complete identity graph of any target.</div>
+        <div class="cat-count">✦ 214 sources indexed</div>
+      </div>
+      <div class="intel-cat" style="--cat-glow:rgba(244,185,66,0.08)">
+        <span class="cat-icon">🕸️</span>
+        <div class="cat-title">Dark Web Recon</div>
+        <div class="cat-desc">Scan paste sites, hacker forums, credential markets, and Tor hidden services for mentions of target identifiers and leaked data.</div>
+        <div class="cat-count">✦ 890 dark sources</div>
+      </div>
+      <div class="intel-cat" style="--cat-glow:rgba(162,89,255,0.08)">
+        <span class="cat-icon">🌍</span>
+        <div class="cat-title">Geospatial Intel</div>
+        <div class="cat-desc">Infer location history from public post metadata, check-ins, photo EXIF data, and IP-linked activity across social platforms.</div>
+        <div class="cat-count">✦ Real-time EXIF analysis</div>
+      </div>
+      <div class="intel-cat" style="--cat-glow:rgba(125,249,255,0.06)">
+        <span class="cat-icon">🔗</span>
+        <div class="cat-title">Social Graph</div>
+        <div class="cat-desc">Map relationships, mutual connections, and network clusters. Identify high-risk affiliations and exposure through connected accounts.</div>
+        <div class="cat-count">✦ Graph analysis engine</div>
+      </div>
+      <div class="intel-cat" style="--cat-glow:rgba(57,255,126,0.06)">
+        <span class="cat-icon">📰</span>
+        <div class="cat-title">Media & Press</div>
+        <div class="cat-desc">Scan news archives, press releases, court records, and public documents for mentions of the target identity across time.</div>
+        <div class="cat-count">✦ 15 years of archives</div>
+      </div>
+      <div class="intel-cat" style="--cat-glow:rgba(244,185,66,0.06)">
+        <span class="cat-icon">💼</span>
+        <div class="cat-title">Corporate Intel</div>
+        <div class="cat-desc">Investigate business registrations, directorships, patents, and corporate filings linked to the target across global registries.</div>
+        <div class="cat-count">✦ 180 country registries</div>
+      </div>
+    </div>
+
+    <!-- Investigation Tools -->
+    <div class="intel-tools">
+      <div class="tool-panel">
+        <div class="tool-panel-header">
+          <div class="tool-icon">🔎</div>
+          <div>
+            <div class="tool-name">Username Profiler</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);margin-top:2px">Check username across 300+ platforms instantly</div>
+          </div>
+        </div>
+        <div class="tool-body">
+          <div class="tool-input-row">
+            <input class="tool-input" id="usernameInput" placeholder="Enter username (without @)" />
+            <button class="tool-btn" onclick="runToolScan('username')">Scan</button>
+          </div>
+          <div class="tool-result-box" id="usernameResult">
+            <span style="color:rgba(232,232,240,0.2)">// Results will appear here after scan...</span>
+          </div>
+        </div>
+      </div>
+      <div class="tool-panel">
+        <div class="tool-panel-header">
+          <div class="tool-icon">📧</div>
+          <div>
+            <div class="tool-name">Breach Checker</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);margin-top:2px">Check email against 12B+ leaked records</div>
+          </div>
+        </div>
+        <div class="tool-body">
+          <div class="tool-input-row">
+            <input class="tool-input" id="emailInput" placeholder="email@domain.com" />
+            <button class="tool-btn" onclick="runToolScan('email')">Check</button>
+          </div>
+          <div class="tool-result-box" id="emailResult">
+            <span style="color:rgba(232,232,240,0.2)">// Results will appear here after scan...</span>
+          </div>
+        </div>
+      </div>
+      <div class="tool-panel">
+        <div class="tool-panel-header">
+          <div class="tool-icon">📱</div>
+          <div>
+            <div class="tool-name">Phone Lookup</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);margin-top:2px">Carrier, location, and broker exposure check</div>
+          </div>
+        </div>
+        <div class="tool-body">
+          <div class="tool-input-row">
+            <input class="tool-input" id="phoneInput" placeholder="+1 (555) 000-0000" />
+            <button class="tool-btn" onclick="runToolScan('phone')">Lookup</button>
+          </div>
+          <div class="tool-result-box" id="phoneResult">
+            <span style="color:rgba(232,232,240,0.2)">// Results will appear here after scan...</span>
+          </div>
+        </div>
+      </div>
+      <div class="tool-panel">
+        <div class="tool-panel-header">
+          <div class="tool-icon">🌐</div>
+          <div>
+            <div class="tool-name">Domain OSINT</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);margin-top:2px">WHOIS, DNS history, and linked identities</div>
+          </div>
+        </div>
+        <div class="tool-body">
+          <div class="tool-input-row">
+            <input class="tool-input" id="domainInput" placeholder="example.com" />
+            <button class="tool-btn" onclick="runToolScan('domain')">Analyze</button>
+          </div>
+          <div class="tool-result-box" id="domainResult">
+            <span style="color:rgba(232,232,240,0.2)">// Results will appear here after scan...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Threat Intel Feed -->
+    <div class="threat-intel-feed">
+      <div class="tif-header">
+        <div class="dash-card-title">// Threat Intelligence Feed</div>
+        <div class="tif-filters">
+          <div class="tif-filter active">All</div>
+          <div class="tif-filter">Critical</div>
+          <div class="tif-filter">Breaches</div>
+          <div class="tif-filter">OSINT</div>
+        </div>
+      </div>
+      <div class="tif-body">
+        <div class="tif-item">
+          <div class="tif-sev sev-crit"></div>
+          <div>
+            <div class="tif-title">Collection #7 — 2.1B Credentials Leaked</div>
+            <div class="tif-desc">A new credential dump containing 2.1 billion username/password pairs was discovered on a dark web forum. Includes plaintext passwords from 14 major breaches spanning 2019–2024.</div>
+            <div class="tif-tags"><span class="tif-tag">BREACH</span><span class="tif-tag">CREDENTIALS</span><span class="tif-tag">DARK WEB</span></div>
+          </div>
+          <div class="tif-date">Today, 08:34</div>
+        </div>
+        <div class="tif-item">
+          <div class="tif-sev sev-high"></div>
+          <div>
+            <div class="tif-title">New Phishing Campaign Targeting LinkedIn Users</div>
+            <div class="tif-desc">Sophisticated spear-phishing operation harvesting LinkedIn credentials via fake recruiter messages. Over 45,000 accounts compromised. Attackers using AI-generated profiles.</div>
+            <div class="tif-tags"><span class="tif-tag">PHISHING</span><span class="tif-tag">LINKEDIN</span><span class="tif-tag">SOCIAL ENG</span></div>
+          </div>
+          <div class="tif-date">Today, 06:12</div>
+        </div>
+        <div class="tif-item">
+          <div class="tif-sev sev-med"></div>
+          <div>
+            <div class="tif-title">Data Broker API Exposed — 340M Profiles Public</div>
+            <div class="tif-desc">A major data aggregator misconfigured their API, exposing 340 million personal profiles including full names, addresses, employment history, and social connections without authentication.</div>
+            <div class="tif-tags"><span class="tif-tag">DATA BROKER</span><span class="tif-tag">API LEAK</span><span class="tif-tag">PII</span></div>
+          </div>
+          <div class="tif-date">Yesterday, 22:18</div>
+        </div>
+        <div class="tif-item">
+          <div class="tif-sev sev-crit"></div>
+          <div>
+            <div class="tif-title">RaidForums Archive — Historical Breach Data Resurfacing</div>
+            <div class="tif-desc">Complete archive of RaidForums breach database now circulating on Telegram channels. Contains over 10,000 unique data dumps with email/password combos from 2015–2022.</div>
+            <div class="tif-tags"><span class="tif-tag">HISTORICAL</span><span class="tif-tag">FORUM</span><span class="tif-tag">CREDENTIALS</span></div>
+          </div>
+          <div class="tif-date">Yesterday, 14:05</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ API PAGE ══════════ -->
+<div class="page" id="page-api">
+  <div class="page-header">
+    <div class="page-eyebrow">// Developer Reference</div>
+    <div class="page-title">API</div>
+    <div class="page-sub">Integrate NEXUS intelligence directly into your applications. REST API with JSON responses, webhook support, and real-time streaming endpoints.</div>
+  </div>
+  <div class="api-body">
+
+    <!-- API Key -->
+    <div class="api-key-section">
+      <div class="aks-header">
+        <div class="panel-label">// Your API Key</div>
+        <span class="dash-card-badge badge-live">● ACTIVE</span>
+      </div>
+      <div class="aks-body">
+        <div class="key-display">
+          <div class="key-value">nx_live_sk_•••••••••••••••••••••••••••••••••a7f2</div>
+          <button class="key-copy-btn" onclick="copyKey()">Copy Key</button>
+          <button class="key-copy-btn" onclick="showToast('🔄','New API key generated. Previous key invalidated in 24h.')">Regenerate</button>
+        </div>
+        <div class="key-limits">
+          <div class="key-limit"><div class="kl-val" style="color:var(--c-green)">4,820</div><div class="kl-label">Requests Remaining</div></div>
+          <div class="key-limit"><div class="kl-val" style="color:var(--c-accent)">10,000</div><div class="kl-label">Monthly Limit</div></div>
+          <div class="key-limit"><div class="kl-val" style="color:var(--c-accent3)">100</div><div class="kl-label">Req / Minute</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="api-stats">
+      <div class="api-stat"><div class="api-stat-val">99.98%</div><div class="api-stat-label">Uptime SLA</div></div>
+      <div class="api-stat"><div class="api-stat-val">&lt;120ms</div><div class="api-stat-label">Avg Response</div></div>
+      <div class="api-stat"><div class="api-stat-val">v3.4</div><div class="api-stat-label">Current Version</div></div>
+    </div>
+
+    <div class="api-grid">
+      <!-- Sidebar -->
+      <div class="api-sidebar">
+        <div class="api-nav-section">
+          <div class="api-nav-label">Core Endpoints</div>
+          <div class="api-nav-link active"><div class="method-dot method-post"></div>Scan Identity</div>
+          <div class="api-nav-link"><div class="method-dot method-get"></div>Get Report</div>
+          <div class="api-nav-link"><div class="method-dot method-get"></div>Check Breach</div>
+          <div class="api-nav-link"><div class="method-dot method-post"></div>Username Lookup</div>
+          <div class="api-nav-link"><div class="method-dot method-get"></div>Threat Feed</div>
+        </div>
+        <div class="api-nav-section">
+          <div class="api-nav-label">Management</div>
+          <div class="api-nav-link"><div class="method-dot method-get"></div>List Scans</div>
+          <div class="api-nav-link"><div class="method-dot method-get"></div>Usage Stats</div>
+          <div class="api-nav-link"><div class="method-dot method-post"></div>Webhooks</div>
+          <div class="api-nav-link"><div class="method-dot method-del"></div>Delete Scan</div>
+        </div>
+        <div class="api-nav-section">
+          <div class="api-nav-label">Resources</div>
+          <div class="api-nav-link"><div class="method-dot method-get" style="background:var(--c-purple)"></div>Rate Limits</div>
+          <div class="api-nav-link"><div class="method-dot method-get" style="background:var(--c-purple)"></div>Error Codes</div>
+          <div class="api-nav-link"><div class="method-dot method-get" style="background:var(--c-purple)"></div>Changelog</div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="api-content">
+        <!-- Base URL -->
+        <div class="endpoint-section">
+          <div class="endpoint-section-title">Base URL</div>
+          <div class="code-block">
+            <span class="code-comment">// All API requests are made to:</span><br>
+            <span class="code-key">https://</span><span class="code-str">api.nexus-intel.io/v3</span>
+            <div class="code-lang">ENDPOINT</div>
+          </div>
+          <div class="code-block">
+            <span class="code-comment">// Authentication — include in every request header:</span><br>
+            <span class="code-key">Authorization:</span> <span class="code-str">Bearer nx_live_sk_YOUR_API_KEY</span><br>
+            <span class="code-key">Content-Type:</span> <span class="code-str">application/json</span>
+            <div class="code-lang">HEADERS</div>
+          </div>
+        </div>
+
+        <!-- POST /scan -->
+        <div class="endpoint-section">
+          <div class="endpoint-section-title">Endpoints</div>
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="method-badge mb-post">POST</span>
+              <span class="endpoint-path">/scan</span>
+              <span class="endpoint-desc-short">Run full identity scan</span>
+            </div>
+            <div class="endpoint-expand">
+              <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;line-height:1.7">Initiates a full OSINT scan against an email address or username. Returns a <code style="font-family:var(--font-mono);color:var(--c-accent);font-size:12px">scan_id</code> for async retrieval, or full results synchronously if <code style="font-family:var(--font-mono);color:var(--c-accent);font-size:12px">sync: true</code>.</p>
+              <div class="code-block">
+<span class="code-comment">// Request body</span><br>
+{<br>
+&nbsp;&nbsp;<span class="code-key">"target"</span>: <span class="code-str">"john.doe@example.com"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"type"</span>: <span class="code-str">"email"</span>, <span class="code-comment">// "email" | "username" | "phone"</span><br>
+&nbsp;&nbsp;<span class="code-key">"depth"</span>: <span class="code-str">"deep"</span>, <span class="code-comment">// "quick" | "standard" | "deep"</span><br>
+&nbsp;&nbsp;<span class="code-key">"sync"</span>: <span class="code-num">false</span>, <span class="code-comment">// true returns results immediately</span><br>
+&nbsp;&nbsp;<span class="code-key">"modules"</span>: [<span class="code-str">"breach"</span>, <span class="code-str">"social"</span>, <span class="code-str">"darkweb"</span>, <span class="code-str">"brokers"</span>]<br>
+}
+                <div class="code-lang">JSON</div>
+              </div>
+              <div class="code-block">
+<span class="code-comment">// Response</span><br>
+{<br>
+&nbsp;&nbsp;<span class="code-key">"scan_id"</span>: <span class="code-str">"scn_7f3a9d2b1e..."</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"status"</span>: <span class="code-str">"queued"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"estimated_ms"</span>: <span class="code-num">4200</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"webhook_url"</span>: <span class="code-str">"https://hooks.nexus-intel.io/..."</span><br>
+}
+                <div class="code-lang">RESPONSE</div>
+              </div>
+              <table class="param-table">
+                <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="param-name">target</td><td class="param-type">string</td><td class="param-req">Required</td><td class="param-desc">Email, username (with or without @), or E.164 phone number</td></tr>
+                  <tr><td class="param-name">type</td><td class="param-type">string</td><td class="param-req">Required</td><td class="param-desc">Target type: <code style="font-family:var(--font-mono);color:var(--c-accent3);font-size:11px">email</code>, <code style="font-family:var(--font-mono);color:var(--c-accent3);font-size:11px">username</code>, or <code style="font-family:var(--font-mono);color:var(--c-accent3);font-size:11px">phone</code></td></tr>
+                  <tr><td class="param-name">depth</td><td class="param-type">string</td><td class="param-opt">Optional</td><td class="param-desc">Scan depth. Defaults to <code style="font-family:var(--font-mono);font-size:11px">standard</code>. Deep scans include dark web (higher cost)</td></tr>
+                  <tr><td class="param-name">sync</td><td class="param-type">boolean</td><td class="param-opt">Optional</td><td class="param-desc">If true, blocks until results are ready (max 30s timeout)</td></tr>
+                  <tr><td class="param-name">modules</td><td class="param-type">array</td><td class="param-opt">Optional</td><td class="param-desc">Specific modules to run. Omit to run all available modules</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- GET /scan/:id -->
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="method-badge mb-get">GET</span>
+              <span class="endpoint-path">/scan/{scan_id}</span>
+              <span class="endpoint-desc-short">Retrieve scan results</span>
+            </div>
+            <div class="endpoint-expand">
+              <div class="code-block">
+<span class="code-comment">// cURL example</span><br>
+<span class="code-key">curl</span> -X GET \<br>
+&nbsp;&nbsp;<span class="code-str">https://api.nexus-intel.io/v3/scan/scn_7f3a9d2b</span> \<br>
+&nbsp;&nbsp;-H <span class="code-str">"Authorization: Bearer nx_live_sk_..."</span>
+                <div class="code-lang">CURL</div>
+              </div>
+              <div class="code-block">
+<span class="code-comment">// Successful response</span><br>
+{<br>
+&nbsp;&nbsp;<span class="code-key">"scan_id"</span>: <span class="code-str">"scn_7f3a9d2b1e"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"status"</span>: <span class="code-str">"complete"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"risk_score"</span>: <span class="code-num">78</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"platforms_found"</span>: <span class="code-num">43</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"exposures"</span>: <span class="code-num">127</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"breaches"</span>: [{ <span class="code-key">"name"</span>: <span class="code-str">"Collection#4"</span>, <span class="code-key">"date"</span>: <span class="code-str">"2019-01-17"</span>, <span class="code-key">"records"</span>: <span class="code-num">773000000</span> }],<br>
+&nbsp;&nbsp;<span class="code-key">"brokers"</span>: [<span class="code-str">"Spokeo"</span>, <span class="code-str">"WhitePages"</span>, <span class="code-str">"BeenVerified"</span>],<br>
+&nbsp;&nbsp;<span class="code-key">"completed_at"</span>: <span class="code-str">"2026-02-19T14:22:08Z"</span><br>
+}
+                <div class="code-lang">RESPONSE</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GET /breach/check -->
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="method-badge mb-get">GET</span>
+              <span class="endpoint-path">/breach/check</span>
+              <span class="endpoint-desc-short">Check email for breaches</span>
+            </div>
+            <div class="endpoint-expand">
+              <div class="code-block">
+<span class="code-comment">// Query parameters</span><br>
+<span class="code-key">GET</span> <span class="code-str">/breach/check?email=john@example.com&truncate=false</span>
+                <div class="code-lang">REQUEST</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- POST /webhook -->
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="method-badge mb-post">POST</span>
+              <span class="endpoint-path">/webhooks</span>
+              <span class="endpoint-desc-short">Register webhook endpoint</span>
+            </div>
+            <div class="endpoint-expand">
+              <div class="code-block">
+<span class="code-comment">// Register a webhook to receive scan results automatically</span><br>
+{<br>
+&nbsp;&nbsp;<span class="code-key">"url"</span>: <span class="code-str">"https://yourapp.io/nexus-webhook"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"events"</span>: [<span class="code-str">"scan.complete"</span>, <span class="code-str">"breach.detected"</span>, <span class="code-str">"alert.critical"</span>],<br>
+&nbsp;&nbsp;<span class="code-key">"secret"</span>: <span class="code-str">"whsec_your_signing_secret"</span><br>
+}
+                <div class="code-lang">JSON</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SDK section -->
+        <div class="endpoint-section">
+          <div class="endpoint-section-title">Quick Start SDK</div>
+          <div class="code-block">
+<span class="code-comment"># Install SDK</span><br>
+<span class="code-key">npm install</span> <span class="code-str">@nexus-intel/sdk</span>
+            <div class="code-lang">TERMINAL</div>
+          </div>
+          <div class="code-block">
+<span class="code-comment">// Initialize and run a scan</span><br>
+<span class="code-key">import</span> { NexusClient } <span class="code-key">from</span> <span class="code-str">'@nexus-intel/sdk'</span>;<br><br>
+<span class="code-key">const</span> nexus = <span class="code-key">new</span> NexusClient(<span class="code-str">'nx_live_sk_YOUR_KEY'</span>);<br><br>
+<span class="code-key">const</span> result = <span class="code-key">await</span> nexus.scan({<br>
+&nbsp;&nbsp;target: <span class="code-str">'john@example.com'</span>,<br>
+&nbsp;&nbsp;type: <span class="code-str">'email'</span>,<br>
+&nbsp;&nbsp;depth: <span class="code-str">'deep'</span><br>
+});<br><br>
+console.log(<span class="code-str">`Risk Score: <span class="code-key">${result.riskScore}</span>`</span>);<br>
+console.log(<span class="code-str">`Breaches found: <span class="code-key">${result.breaches.length}</span>`</span>);
+            <div class="code-lang">JAVASCRIPT</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /shell -->
+
+<div class="toast" id="toast">
+  <div class="toast-icon" id="toastIcon">✓</div>
+  <span id="toastMsg">Done</span>
+  <div class="toast-bar"></div>
+</div>
+
+<script>
+/* ── Cursor ── */
+const cursor = document.getElementById('cursor');
+const cursorTrail = document.getElementById('cursor-trail');
+let mx=0,my=0,tx=0,ty=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
+function animateTrail(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;cursorTrail.style.left=tx+'px';cursorTrail.style.top=ty+'px';requestAnimationFrame(animateTrail);}
+animateTrail();
+document.querySelectorAll('a,button,input,.hint-tag,.heatmap-cell,.ip-item,.threat-item,.btn,.task-card,.intel-cat,.tif-item,.endpoint-header,.tool-btn,.api-nav-link,.kpi-card').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='24px';cursor.style.height='24px';});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='12px';cursor.style.height='12px';});
+});
+
+/* ── Canvas ── */
+const canvas=document.getElementById('bg-canvas'),ctx=canvas.getContext('2d');let nodes=[];
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+function initNodes(){nodes=[];const c=Math.floor(canvas.width*canvas.height/30000);for(let i=0;i<c;i++)nodes.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.5+.5});}
+function drawCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height);nodes.forEach(n=>{n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>canvas.width)n.vx*=-1;if(n.y<0||n.y>canvas.height)n.vy*=-1;ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fillStyle='rgba(125,249,255,0.4)';ctx.fill();});for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<140){ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.strokeStyle=`rgba(125,249,255,${.07*(1-dist/140)})`;ctx.lineWidth=.5;ctx.stroke();}}requestAnimationFrame(drawCanvas);}
+resizeCanvas();initNodes();drawCanvas();
+window.addEventListener('resize',()=>{resizeCanvas();initNodes();});
+
+/* ── Navigation ── */
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l=>{l.classList.toggle('active',l.dataset.page===page);});
+  window.scrollTo({top:0,behavior:'smooth'});
+  // Load dashboard KPIs
+  if(page==='dashboard'){
+    setTimeout(()=>document.querySelectorAll('.kpi-card').forEach((c,i)=>setTimeout(()=>c.classList.add('loaded'),i*150)),100);
+  }
+}
+
+/* ── Live Time ── */
+function updateTime(){const n=new Date();document.getElementById('liveTime').textContent=n.toTimeString().slice(0,8);}
+setInterval(updateTime,1000);updateTime();
+
+/* ── Feed ── */
+const feedEvents=[
+  {type:'warn',text:'Username indexed on 14 new platforms in last 30 days'},
+  {type:'crit',text:'Email found in breach: Collection#4 (2.7B records)'},
+  {type:'info',text:'LinkedIn profile publicly accessible, scraped 42 times'},
+  {type:'warn',text:'Phone number listed on 8 data broker marketplaces'},
+  {type:'ok',text:'Two-factor auth detected on primary accounts'},
+  {type:'crit',text:'Home address visible via public records aggregator'},
+  {type:'info',text:'Google search returns 680+ indexed results'},
+  {type:'warn',text:'Social graph analysis reveals 3 high-risk connections'},
+  {type:'ok',text:'No credential dumps found in dark web marketplaces'},
+  {type:'crit',text:'Password hash leaked on RaidForums (2021)'},
+  {type:'info',text:'Device fingerprint detected across 12 ad networks'},
+  {type:'warn',text:'Geolocation data inferred from 23 public posts'},
+];
+let feedIdx=0;const feed=document.getElementById('activityFeed');
+function addFeedItem(){const ev=feedEvents[feedIdx%feedEvents.length];feedIdx++;const now=new Date(),time=now.toTimeString().slice(0,8);const el=document.createElement('div');el.className='feed-item';el.innerHTML=`<span class="feed-time">${time}</span><span class="feed-type ${ev.type}">${ev.type.toUpperCase()}</span><span class="feed-text">${ev.text}</span>`;feed.insertBefore(el,feed.firstChild);if(feed.children.length>20)feed.removeChild(feed.lastChild);}
+for(let i=0;i<8;i++)setTimeout(()=>addFeedItem(),i*300);
+setInterval(addFeedItem,2800);
+
+/* ── Scanner ── */
+function hashStr(s){let h=5381;for(let c of s)h=((h<<5)+h)^c.charCodeAt(0);return Math.abs(h);}
+const threats=[
+  {name:'Social Media Exposure',icon:'📱',base:88,color:'linear-gradient(90deg,#FF3E80,#FF85A6)'},
+  {name:'Marketing Databases',icon:'📊',base:76,color:'linear-gradient(90deg,#F4B942,#FFD97D)'},
+  {name:'Search Engine Indexing',icon:'🔎',base:72,color:'linear-gradient(90deg,#A259FF,#C99FFF)'},
+  {name:'Data Broker Networks',icon:'💼',base:68,color:'linear-gradient(90deg,#7DF9FF,#B5FCFF)'},
+  {name:'Public Records',icon:'📋',base:54,color:'linear-gradient(90deg,#39FF7E,#8FFFB6)'},
+  {name:'Dark Web Presence',icon:'🕸',base:45,color:'linear-gradient(90deg,#FF6B6B,#FF9E9E)'},
+];
+const secTips=[
+  {t:'Authentication',d:'Enable <strong>hardware security keys</strong> (FIDO2) on all high-value accounts.'},
+  {t:'App Permissions',d:'Audit & revoke OAuth grants — especially legacy third-party app access.'},
+  {t:'Encryption',d:'Switch to end-to-end encrypted messaging for sensitive communications.'},
+  {t:'Network',d:'Use a reputable no-log VPN on all public and untrusted networks.'},
+  {t:'Passwords',d:'Rotate compromised credentials and adopt a zero-knowledge password manager.'},
+];
+const actTips=[
+  {t:'Data Deletion',d:'Submit opt-out requests to the <strong>47 data brokers</strong> identified in this scan.'},
+  {t:'Privacy Settings',d:'Update visibility controls on your top 10 platforms within 48 hours.'},
+  {t:'Breach Monitoring',d:'Enable real-time dark web monitoring and automated breach alerts.'},
+  {t:'Footprint Reduction',d:'Deactivate dormant accounts identified in the platform analysis.'},
+  {t:'Identity Protection',d:'Enroll in credit freeze and identity theft insurance services.'},
+];
+
+function animateVal(el,target,duration=1800){const start=performance.now();const update=now=>{const p=Math.min((now-start)/duration,1),ease=1-Math.pow(1-p,4);el.textContent=Math.floor(ease*target);if(p<1)requestAnimationFrame(update);};requestAnimationFrame(update);}
+
+function buildHeatmap(seed){const grid=document.getElementById('heatmapGrid');grid.innerHTML='';const alphas=[0.04,0.15,0.35,0.65,0.9];for(let i=0;i<56;i++){const cell=document.createElement('div');cell.className='heatmap-cell';const v=((seed+i*37)%5);cell.style.background=`rgba(125,249,255,${alphas[v]})`;cell.setAttribute('data-tip',`${v*3+(i%3)} events`);grid.appendChild(cell);}}
+
+let state={};
+async function runAnalysis(){
+  const input=document.getElementById('userInput').value.trim();
+  if(!input){showToast('⚠️','Please enter a target identifier to scan.');return;}
+  
+  document.getElementById('analyzeBtn').textContent='Scanning...';
+  document.getElementById('analyzeBtn').style.opacity='0.6';
+  document.getElementById('analyzingState').classList.add('show');
+  
+  try {
+    // Call the backend API
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        identifier: input,
+        include_deep_scan: true
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Analysis failed');
+    }
+    
+    const data = await response.json();
+    
+    // Update state with real data from backend
+    state = {
+      platforms: data.platform_count || 0,
+      exposures: data.exposure_count || 0,
+      threat: data.threat_level || 0,
+      score: data.risk_score || 0,
+      darkweb: data.dark_web_findings || 0,
+      brokers: data.brokers_found || 0,
+      indexed: data.search_engine_results || 0,
+      idScore: data.identity_score || 0,
+      threats: data.threats || [],
+      passwordSafety: data.password_analysis || {},
+      phoneSafety: data.phone_analysis || {}
+    };
+    
+    document.getElementById('analyzeBtn').textContent='Execute';
+    document.getElementById('analyzeBtn').style.opacity='1';
+    document.getElementById('analyzingState').classList.remove('show');
+    showResults();
+    showToast('✓', `Scan complete — ${state.exposures} exposures found across ${state.platforms} platforms.`);
+    
+  } catch (error) {
+    console.error('Analysis error:', error);
+    document.getElementById('analyzeBtn').textContent='Execute';
+    document.getElementById('analyzeBtn').style.opacity='1';
+    document.getElementById('analyzingState').classList.remove('show');
+    showToast('❌', 'Analysis failed. Please try again.');
+  }
+}
+
+function showResults(){
+  const res=document.getElementById('results');res.classList.add('show');
+  res.scrollIntoView({behavior:'smooth',block:'start'});
+  animateVal(document.getElementById('m-platforms'),state.platforms,1600);
+  animateVal(document.getElementById('m-exposures'),state.exposures,1600);
+  animateVal(document.getElementById('m-threat'),state.threat,1600);
+  setTimeout(()=>{document.querySelectorAll('.metric-cell').forEach((c,i)=>setTimeout(()=>c.classList.add('animate'),i*200));},100);
+  setTimeout(()=>{
+    const pct=state.score/100,totalLen=380,filled=totalLen*pct;
+    document.getElementById('gaugePath').style.strokeDashoffset=totalLen-filled;
+    document.getElementById('gaugePath').style.transition='stroke-dashoffset 1.8s cubic-bezier(0.16,1,0.3,1)';
+    animateVal(document.getElementById('gaugeNum'),state.score);
+    const badge=document.getElementById('riskBadge');
+    badge.textContent=state.score>80?'CRITICAL':state.score>60?'HIGH RISK':'MODERATE';
+  },400);
+  const tList=document.getElementById('threatList');tList.innerHTML='';
+  state.threats.forEach((t,i)=>{const el=document.createElement('div');el.className='threat-item';el.style.cssText='opacity:0;transform:translateY(10px);transition:all 0.4s ease';el.innerHTML=`<div class="ti-emoji">${t.icon}</div><div class="ti-body"><div class="ti-name">${t.name}</div><div class="ti-bar"><div class="ti-fill" style="background:${t.color}" data-w="${t.risk}"></div></div></div><div class="ti-pct">${t.risk}%</div>`;tList.appendChild(el);setTimeout(()=>{el.style.opacity='1';el.style.transform='translateY(0)';const fill=el.querySelector('.ti-fill');setTimeout(()=>{fill.style.width=fill.dataset.w+'%';},100);},600+i*120);});
+  buildHeatmap(hashStr(document.getElementById('userInput').value));
+  setTimeout(()=>{
+    animateVal(document.getElementById('s-darkweb'),state.darkweb,1200);
+    animateVal(document.getElementById('s-brokers'),state.brokers,1200);
+    animateVal(document.getElementById('s-indexed'),state.indexed,1200);
+    animateVal(document.getElementById('s-score'),state.idScore,1200);
+    [{id:'sb-1',pct:state.darkweb/20},{id:'sb-2',pct:state.brokers/60},{id:'sb-3',pct:state.indexed/800},{id:'sb-4',pct:state.idScore/850}].forEach(({id,pct})=>{const bar=document.getElementById(id);bar.style.transition='width 1.5s cubic-bezier(0.16,1,0.3,1)';bar.style.width=(Math.min(pct,1)*100)+'%';});
+  },800);
+  renderList('secList',secTips);renderList('actList',actTips);
+  
+  // Display password and phone safety analysis
+  if(state.passwordSafety && state.phoneSafety) {
+    displayPasswordSafety(state.passwordSafety);
+    displayPhoneSafety(state.phoneSafety);
+  }
+}
+
+function displayPasswordSafety(passwordData) {
+  const container = document.getElementById('passwordSafety');
+  const safetyLevel = passwordData.safety_level || 'UNKNOWN';
+  const safetyScore = passwordData.safety_score || 0;
+  const patterns = passwordData.detected_patterns || 0;
+  let levelColor = 'var(--c-green)';
+  if (safetyLevel === 'WEAK') levelColor = 'var(--c-accent2)';
+  else if (safetyLevel === 'MODERATE') levelColor = 'var(--c-accent3)';
+  
+  container.innerHTML = `
+    <div class="ip-item">
+      <div class="ip-num" style="color: ${levelColor}">${safetyScore}%</div>
+      <div class="ip-text">
+        <strong>Password Safety: ${safetyLevel}</strong> — ${patterns} risky patterns detected<br><br>
+        <strong>Recommendations:</strong><br>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          ${(passwordData.recommendations || []).map(rec => `<li style="margin-bottom: 4px;">${rec}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+function displayPhoneSafety(phoneData) {
+  const container = document.getElementById('phoneSafety');
+  const privacyLevel = phoneData.privacy_level || 'UNKNOWN';
+  const privacyScore = phoneData.privacy_score || 0;
+  const phonesFound = phoneData.phone_numbers_found || 0;
+  let levelColor = 'var(--c-green)';
+  if (privacyLevel === 'HIGH RISK') levelColor = 'var(--c-accent2)';
+  else if (privacyLevel === 'MODERATE RISK') levelColor = 'var(--c-accent3)';
+  else if (privacyLevel === 'LOW RISK') levelColor = 'var(--c-green)';
+  
+  container.innerHTML = `
+    <div class="ip-item">
+      <div class="ip-num" style="color: ${levelColor}">${privacyScore}%</div>
+      <div class="ip-text">
+        <strong>Phone Privacy: ${privacyLevel}</strong> — ${phonesFound} phone numbers detected<br><br>
+        <strong>Recommendations:</strong><br>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          ${(phoneData.recommendations || []).map(rec => `<li style="margin-bottom: 4px;">${rec}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+function renderList(id,items){const cont=document.getElementById(id);cont.innerHTML='';items.forEach((item,i)=>{const el=document.createElement('div');el.className='ip-item';el.style.cssText='opacity:0;transform:translateX(-12px);transition:all 0.4s ease';el.innerHTML=`<div class="ip-num">${String(i+1).padStart(2,'0')}</div><div class="ip-text"><strong>${item.t}:</strong> ${item.d}</div>`;cont.appendChild(el);setTimeout(()=>{el.style.opacity='1';el.style.transform='translateX(0)';},900+i*100);});}
+
+const toolResults={
+  username:(v)=>`<span style="color:var(--c-green)">// Scan complete for @${v}</span><br><br>
+<span style="color:var(--c-accent2)">✦ Found on 38 platforms</span><br>
+<span style="color:var(--c-accent3)">→ Twitter/X · Instagram · GitHub · Reddit</span><br>
+<span style="color:var(--c-accent3)">→ LinkedIn · TikTok · Pinterest · Twitch</span><br>
+<span style="color:rgba(232,232,240,0.5)">→ + 30 more platforms detected</span><br><br>
+<span style="color:var(--c-muted)">Risk Level: <span style="color:var(--c-accent2)">HIGH</span> · Profile Age: ~6 years</span>`,
+  email:(v)=>`<span style="color:var(--c-green)">// Breach check complete for ${v}</span><br><br>
+<span style="color:var(--c-accent2)">⚠ 4 breaches detected</span><br>
+<span style="color:var(--c-accent3)">→ Collection#4 — Jan 2019 (773M records)</span><br>
+<span style="color:var(--c-accent3)">→ LinkedIn 2021 (700M scraped profiles)</span><br>
+<span style="color:var(--c-accent3)">→ Adobe 2013 (153M accounts)</span><br>
+<span style="color:var(--c-accent3)">→ Dropbox 2012 (68M accounts)</span><br><br>
+<span style="color:var(--c-muted)">Data exposed: password, name, phone, location</span>`,
+  phone:(v)=>`<span style="color:var(--c-green)">// Phone lookup complete for ${v}</span><br><br>
+<span style="color:var(--c-accent)">Carrier: T-Mobile USA</span><br>
+<span style="color:var(--c-accent3)">Type: Mobile (VoIP flagged)</span><br>
+<span style="color:var(--c-accent3)">Region: New York, USA</span><br>
+<span style="color:var(--c-accent2)">Listed on 12 data broker sites</span><br>
+<span style="color:var(--c-accent2)">Found in 2 breach databases</span><br><br>
+<span style="color:var(--c-muted)">Risk: Highly exposed — opt-out recommended</span>`,
+  domain:(v)=>`<span style="color:var(--c-green)">// Domain OSINT complete for ${v}</span><br><br>
+<span style="color:var(--c-accent)">Registrar: GoDaddy LLC</span><br>
+<span style="color:var(--c-accent3)">Registered: 2018-03-14 · Expires: 2027-03-14</span><br>
+<span style="color:var(--c-accent3)">Nameservers: ns1.cloudflare.com (2 records)</span><br>
+<span style="color:var(--c-accent2)">3 email addresses linked to this domain</span><br>
+<span style="color:var(--c-muted)">Hosting: Cloudflare Inc. · San Francisco, CA</span><br><br>
+<span style="color:var(--c-muted)">Associated breaches: 1 · Subdomains found: 14</span>`
+};
+
+function runToolScan(type){
+  const inputs={username:'usernameInput',email:'emailInput',phone:'phoneInput',domain:'domainInput'};
+  const results={username:'usernameResult',email:'emailResult',phone:'phoneResult',domain:'domainResult'};
+  const val=document.getElementById(inputs[type]).value.trim();
+  if(!val){showToast('⚠️','Please enter a value to scan.');return;}
+  const resBox=document.getElementById(results[type]);
+  resBox.innerHTML=`<span style="color:var(--c-accent)">// Scanning</span><span class="analyzing-dots" style="display:inline-flex;gap:4px;margin-left:8px"><span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--c-accent);animation:dotPulse 1.4s infinite both"></span><span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--c-accent);animation:dotPulse 1.4s 0.2s infinite both"></span><span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--c-accent);animation:dotPulse 1.4s 0.4s infinite both"></span></span>`;
+  setTimeout(()=>{resBox.innerHTML=toolResults[type](val);showToast('✓',`${type.charAt(0).toUpperCase()+type.slice(1)} scan complete.`);},1800);
+}
+
+/* ── TIF Filters ── */
+document.querySelectorAll('.tif-filter').forEach(f=>{
+  f.addEventListener('click',()=>{
+    document.querySelectorAll('.tif-filter').forEach(x=>x.classList.remove('active'));
+    f.classList.add('active');
+    showToast('🔍',`Filtering by: ${f.textContent}`);
+  });
+});
+
+/* ── API Sidebar ── */
+document.querySelectorAll('.api-nav-link').forEach(l=>{
+  l.addEventListener('click',()=>{
+    document.querySelectorAll('.api-nav-link').forEach(x=>x.classList.remove('active'));
+    l.classList.add('active');
+  });
+});
+
+/* ── Copy Key ── */
+function copyKey(){navigator.clipboard.writeText('nx_live_sk_a7f2').catch(()=>{});showToast('📋','API key copied to clipboard.');}
+
+/* ── Toast ── */
+let toastTimer;
+function showToast(icon,msg){
+  const toast=document.getElementById('toast');const bar=toast.querySelector('.toast-bar');
+  document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMsg').textContent=msg;
+  toast.classList.add('show');bar.style.animation='none';void bar.offsetWidth;bar.style.animation='toastBar 4s linear forwards';
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),4200);
+}
+
+/* ── Scanner Events ── */
+document.getElementById('analyzeBtn').addEventListener('click',runAnalysis);
+document.getElementById('userInput').addEventListener('keydown',e=>{if(e.key==='Enter')runAnalysis();});
+function fillDemo(v){document.getElementById('userInput').value=v;document.getElementById('userInput').focus();}
+document.getElementById('downloadBtn').addEventListener('click',()=>showToast('📄','Generating full PDF report — ready in moments.'));
+document.getElementById('scheduleBtn').addEventListener('click',()=>showToast('📅','Opening privacy audit scheduling interface...'));
+document.getElementById('contactBtn').addEventListener('click',()=>showToast('💬','Connecting you with a certified security analyst.'));
+
+/* ── Dashboard KPI on load ── */
+setTimeout(()=>document.querySelectorAll('.kpi-card').forEach((c,i)=>setTimeout(()=>c.classList.add('loaded'),i*200)),300);
+</script>
+</body>
+</html>
