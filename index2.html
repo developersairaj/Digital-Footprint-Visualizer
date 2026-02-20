@@ -489,6 +489,17 @@ nav {
   .api-grid{grid-template-columns:1fr}.api-sidebar{position:static}
   .tasks-grid{grid-template-columns:1fr}
 }
+
+/* Prevent browser autofill from overriding dark theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0a0a12 inset !important;
+  -webkit-text-fill-color: #e8e8f0 !important;
+  caret-color: #e8e8f0 !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
 </style>
 </head>
 <body>
@@ -909,16 +920,16 @@ nav {
           <div class="tool-icon">📱</div>
           <div>
             <div class="tool-name">Phone Lookup</div>
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);margin-top:2px">Carrier, location, and broker exposure check</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);margin-top:2px">Country &amp; carrier detection from number prefix</div>
           </div>
         </div>
         <div class="tool-body">
           <div class="tool-input-row">
-            <input class="tool-input" id="phoneInput" placeholder="+1 (555) 000-0000" />
+            <input class="tool-input" id="phoneInput" placeholder="+91 9594779176 (include country code)" style="background:#0a0a12;color:#e8e8f0;-webkit-text-fill-color:#e8e8f0;" autocomplete="off" />
             <button class="tool-btn" onclick="runToolScan('phone')">Lookup</button>
           </div>
-          <div class="tool-result-box" id="phoneResult">
-            <span style="color:rgba(232,232,240,0.2)">// Results will appear here after scan...</span>
+          <div class="tool-result-box" id="phoneResult" style="min-height:120px;">
+            <span style="color:rgba(232,232,240,0.2)">// Results will appear here after lookup...</span>
           </div>
         </div>
       </div>
@@ -1519,62 +1530,145 @@ const toolResults={
 <span style="color:rgba(232,232,240,0.5)">→ + 30 more platforms detected</span><br><br>
 <span style="color:var(--c-muted)">Risk Level: <span style="color:var(--c-accent2)">HIGH</span> · Profile Age: ~6 years</span>`,
   phone:(v)=>{
-    const countryCodes=[
-      {code:'+91',country:'India',flag:'🇮🇳',carrier:'Jio / Airtel',region:'South Asia'},
-      {code:'+1',country:'United States / Canada',flag:'🇺🇸',carrier:'T-Mobile USA',region:'North America'},
-      {code:'+44',country:'United Kingdom',flag:'🇬🇧',carrier:'EE / Vodafone UK',region:'Europe'},
-      {code:'+61',country:'Australia',flag:'🇦🇺',carrier:'Telstra',region:'Oceania'},
-      {code:'+49',country:'Germany',flag:'🇩🇪',carrier:'Deutsche Telekom',region:'Europe'},
-      {code:'+33',country:'France',flag:'🇫🇷',carrier:'Orange France',region:'Europe'},
-      {code:'+81',country:'Japan',flag:'🇯🇵',carrier:'NTT Docomo',region:'Asia'},
-      {code:'+86',country:'China',flag:'🇨🇳',carrier:'China Mobile',region:'Asia'},
-      {code:'+7',country:'Russia',flag:'🇷🇺',carrier:'MTS Russia',region:'Eastern Europe'},
-      {code:'+55',country:'Brazil',flag:'🇧🇷',carrier:'Claro Brasil',region:'South America'},
-      {code:'+27',country:'South Africa',flag:'🇿🇦',carrier:'Vodacom',region:'Africa'},
-      {code:'+971',country:'United Arab Emirates',flag:'🇦🇪',carrier:'Etisalat',region:'Middle East'},
-      {code:'+966',country:'Saudi Arabia',flag:'🇸🇦',carrier:'STC',region:'Middle East'},
-      {code:'+92',country:'Pakistan',flag:'🇵🇰',carrier:'Jazz / Zong',region:'South Asia'},
-      {code:'+880',country:'Bangladesh',flag:'🇧🇩',carrier:'Grameenphone',region:'South Asia'},
-      {code:'+62',country:'Indonesia',flag:'🇮🇩',carrier:'Telkomsel',region:'Southeast Asia'},
-      {code:'+82',country:'South Korea',flag:'🇰🇷',carrier:'SK Telecom',region:'Asia'},
-      {code:'+34',country:'Spain',flag:'🇪🇸',carrier:'Movistar',region:'Europe'},
-      {code:'+39',country:'Italy',flag:'🇮🇹',carrier:'TIM Italia',region:'Europe'},
-      {code:'+52',country:'Mexico',flag:'🇲🇽',carrier:'Telcel',region:'North America'},
-      {code:'+20',country:'Egypt',flag:'🇪🇬',carrier:'Vodafone Egypt',region:'Africa'},
-      {code:'+234',country:'Nigeria',flag:'🇳🇬',carrier:'MTN Nigeria',region:'Africa'},
-      {code:'+254',country:'Kenya',flag:'🇰🇪',carrier:'Safaricom',region:'Africa'},
-      {code:'+31',country:'Netherlands',flag:'🇳🇱',carrier:'KPN',region:'Europe'},
-      {code:'+46',country:'Sweden',flag:'🇸🇪',carrier:'Telia',region:'Europe'},
-      {code:'+41',country:'Switzerland',flag:'🇨🇭',carrier:'Swisscom',region:'Europe'},
-      {code:'+65',country:'Singapore',flag:'🇸🇬',carrier:'Singtel',region:'Southeast Asia'},
-      {code:'+60',country:'Malaysia',flag:'🇲🇾',carrier:'Maxis',region:'Southeast Asia'},
-      {code:'+63',country:'Philippines',flag:'🇵🇭',carrier:'Globe Telecom',region:'Southeast Asia'},
-      {code:'+66',country:'Thailand',flag:'🇹🇭',carrier:'AIS Thailand',region:'Southeast Asia'},
+    const raw = v.replace(/[\s\-().]/g,'');
+
+    // ── Country detection ──
+    const countryMap=[
+      {code:'+971',country:'UAE',flag:'🇦🇪',region:'Middle East'},
+      {code:'+966',country:'Saudi Arabia',flag:'🇸🇦',region:'Middle East'},
+      {code:'+880',country:'Bangladesh',flag:'🇧🇩',region:'South Asia'},
+      {code:'+234',country:'Nigeria',flag:'🇳🇬',region:'Africa'},
+      {code:'+254',country:'Kenya',flag:'🇰🇪',region:'Africa'},
+      {code:'+91',country:'India',flag:'🇮🇳',region:'South Asia'},
+      {code:'+1',country:'United States / Canada',flag:'🇺🇸',region:'North America'},
+      {code:'+44',country:'United Kingdom',flag:'🇬🇧',region:'Europe'},
+      {code:'+61',country:'Australia',flag:'🇦🇺',region:'Oceania'},
+      {code:'+49',country:'Germany',flag:'🇩🇪',region:'Europe'},
+      {code:'+33',country:'France',flag:'🇫🇷',region:'Europe'},
+      {code:'+81',country:'Japan',flag:'🇯🇵',region:'Asia'},
+      {code:'+86',country:'China',flag:'🇨🇳',region:'Asia'},
+      {code:'+7',country:'Russia',flag:'🇷🇺',region:'Eastern Europe'},
+      {code:'+55',country:'Brazil',flag:'🇧🇷',region:'South America'},
+      {code:'+27',country:'South Africa',flag:'🇿🇦',region:'Africa'},
+      {code:'+92',country:'Pakistan',flag:'🇵🇰',region:'South Asia'},
+      {code:'+62',country:'Indonesia',flag:'🇮🇩',region:'Southeast Asia'},
+      {code:'+82',country:'South Korea',flag:'🇰🇷',region:'Asia'},
+      {code:'+34',country:'Spain',flag:'🇪🇸',region:'Europe'},
+      {code:'+39',country:'Italy',flag:'🇮🇹',region:'Europe'},
+      {code:'+52',country:'Mexico',flag:'🇲🇽',region:'North America'},
+      {code:'+20',country:'Egypt',flag:'🇪🇬',region:'Africa'},
+      {code:'+31',country:'Netherlands',flag:'🇳🇱',region:'Europe'},
+      {code:'+46',country:'Sweden',flag:'🇸🇪',region:'Europe'},
+      {code:'+41',country:'Switzerland',flag:'🇨🇭',region:'Europe'},
+      {code:'+65',country:'Singapore',flag:'🇸🇬',region:'Southeast Asia'},
+      {code:'+60',country:'Malaysia',flag:'🇲🇾',region:'Southeast Asia'},
+      {code:'+63',country:'Philippines',flag:'🇵🇭',region:'Southeast Asia'},
+      {code:'+66',country:'Thailand',flag:'🇹🇭',region:'Southeast Asia'},
+      {code:'+98',country:'Iran',flag:'🇮🇷',region:'Middle East'},
+      {code:'+90',country:'Turkey',flag:'🇹🇷',region:'Middle East'},
+      {code:'+48',country:'Poland',flag:'🇵🇱',region:'Europe'},
+      {code:'+30',country:'Greece',flag:'🇬🇷',region:'Europe'},
+      {code:'+351',country:'Portugal',flag:'🇵🇹',region:'Europe'},
     ];
-    // Sort by code length descending so longer codes match first (e.g. +971 before +9)
-    const sorted=[...countryCodes].sort((a,b)=>b.code.length-a.code.length);
-    const clean=v.trim();
-    let match=null;
-    if(clean.startsWith('+')){
-      match=sorted.find(c=>clean.startsWith(c.code));
+    const sortedCountry=[...countryMap].sort((a,b)=>b.code.length-a.code.length);
+    const ctryMatch = raw.startsWith('+') ? sortedCountry.find(c=>raw.startsWith(c.code)) : null;
+
+    if(!ctryMatch && !raw.startsWith('+')){
+      return `<span style="color:var(--c-accent2)">⚠ Include country code</span><br><span style="color:var(--c-muted)">Format: +91 9594779176 for India, +1 4155552671 for USA, etc.</span>`;
     }
-    if(match){
-      return `<span style="color:var(--c-green)">// Phone lookup complete for ${v}</span><br><br>
-<span style="color:var(--c-accent)">${match.flag} Country: ${match.country}</span><br>
-<span style="color:var(--c-accent3)">Region: ${match.region}</span><br>
-<span style="color:var(--c-accent3)">Carrier: ${match.carrier}</span><br>
-<span style="color:var(--c-accent3)">Type: Mobile (VoIP check applied)</span><br>
-<span style="color:var(--c-accent2)">Listed on 12 data broker sites</span><br>
-<span style="color:var(--c-accent2)">Found in 2 breach databases</span><br><br>
-<span style="color:var(--c-muted)">Risk: Highly exposed — opt-out recommended</span>`;
-    } else {
-      return `<span style="color:var(--c-green)">// Phone lookup complete for ${v}</span><br><br>
-<span style="color:var(--c-accent2)">⚠ Country code not detected</span><br>
-<span style="color:var(--c-muted)">Please include country code (e.g. +91 for India, +1 for USA)</span><br><br>
-<span style="color:var(--c-accent3)">Type: Mobile</span><br>
-<span style="color:var(--c-accent2)">Listed on data broker sites</span><br><br>
-<span style="color:var(--c-muted)">Tip: Format as +[country code][number] for full country detection</span>`;
+
+    // ── Carrier guessing by prefix ──
+    let carrier='Unknown', carrierColor='var(--c-muted)', lineType='Mobile', confidence='~';
+
+    if(ctryMatch && ctryMatch.code==='+91'){
+      // India — use 4-digit prefix after +91
+      const local = raw.slice(3); // digits after +91
+      const p4 = local.slice(0,4);
+      const p2 = local.slice(0,2);
+
+      // Jio prefixes (starts with 6, 7 ranges: 6000-6999, 7000-7099, 7800-7899, 8900-8999 some, 9650-9999 some)
+      const jio4=['6000','6001','6002','6003','6004','6005','6006','6007','6008','6009',
+                  '7000','7001','7002','7003','7004','7005','7006','7007','7008','7009',
+                  '7010','7011','7012','7013','7014','7015','7016','7017','7018','7019',
+                  '7020','7021','7022','7023','7024','7025','7026','7027','7028','7029',
+                  '7030','7031','7032','7033','7034','7035','7036','7037','7038','7039',
+                  '7040','7041','7042','7043','7044','7045','7046','7047','7048','7049',
+                  '7050','7051','7052','7053','7054','7055','7056','7057','7058','7059',
+                  '7060','7061','7062','7063','7064','7065','7066','7067','7068','7069',
+                  '7070','7071','7072','7073','7074','7075','7076','7077','7078','7079',
+                  '7080','7081','7082','7083','7084','7085','7086','7087','7088','7089',
+                  '7090','7091','7092','7093','7094','7095','7096','7097','7098','7099',
+                  '8800','8801','8802','8803','8804','8805','8806','8807','8808','8809',
+                  '9650','9651','9652','9653','9654','9655','9656','9657','9658','9659',
+                  '9660','9661','9662','9663','9664','9665','9666','9667','9668','9669',
+                  '9670','9671','9672','9673','9674','9675','9676','9677','9678','9679',
+                  '9680','9681','9682','9683','9684','9685','9686','9687','9688','9689',
+                  '9690','9691','9692','9693','9694','9695','9696','9697','9698','9699',
+                  '9700','9701','9702','9703','9704','9705','9706','9707','9708','9709',
+                  '9711','9712','9713','9714','9715','9716','9717','9718','9719',
+                  '9720','9721','9722','9723','9724','9725','9726','9727','9728','9729'];
+      // Airtel prefixes
+      const airtel2=['94','95','96','98','99','70','73','74','75','76','77','78','79','86','87','88','89'];
+      // Vi (Vodafone Idea)
+      const vi2=['72','73','78','88','89','97','99'];
+      // BSNL
+      const bsnl2=['94','97','94'];
+
+      // More precise: check 4-digit first
+      if(jio4.some(j=>p4.startsWith(j.slice(0,4)))||p2==='60'||p2==='61'||p2==='62'||p2==='63'||p2==='64'||p2==='65'||p2==='66'||p2==='67'||p2==='68'||p2==='69'){
+        carrier='Reliance Jio'; carrierColor='#FF6B35'; confidence='High';
+      } else if(['94','95','96','98'].includes(p2)||['9810','9811','9812','9813','9814','9958','9999','8800','8527'].includes(p4)){
+        carrier='Airtel'; carrierColor='#E8001C'; confidence='High';
+      } else if(['72','74','78','88','89','97'].includes(p2)||['7229','7228','9820','9821','9823','9867','9820'].includes(p4)){
+        carrier='Vi (Vodafone Idea)'; carrierColor='#EE1C25'; confidence='Moderate';
+      } else if(p2==='94'&&['9400','9401','9402','9403','9404','9405','9406','9407','9408','9409'].includes(p4)){
+        carrier='BSNL'; carrierColor='#1A6BAD'; confidence='High';
+      } else if(['94','95'].includes(p2)){
+        carrier='Airtel / BSNL'; carrierColor='#E8001C'; confidence='Moderate';
+      } else if(['70','71'].includes(p2)){
+        carrier='Jio / Airtel'; carrierColor='#FF6B35'; confidence='Moderate';
+      } else if(['73','76','77'].includes(p2)){
+        carrier='Vi / Jio'; carrierColor='#EE1C25'; confidence='Moderate';
+      } else {
+        carrier='Airtel / Jio / Vi'; carrierColor='var(--c-accent3)'; confidence='Low';
+      }
+    } else if(ctryMatch && ctryMatch.code==='+1'){
+      carrier='AT&T / Verizon / T-Mobile'; carrierColor='var(--c-accent)'; confidence='Low';
+    } else if(ctryMatch && ctryMatch.code==='+44'){
+      carrier='EE / O2 / Vodafone UK / Three'; carrierColor='var(--c-accent)'; confidence='Low';
+    } else if(ctryMatch && ctryMatch.code==='+92'){
+      const local=raw.slice(3); const p2=local.slice(0,2);
+      if(['30','31'].includes(p2)){carrier='Jazz';carrierColor='#FF6600';confidence='High';}
+      else if(p2==='32'){carrier='Warid / Jazz';carrierColor='#FF6600';confidence='High';}
+      else if(p2==='33'){carrier='Ufone';carrierColor='#00A859';confidence='High';}
+      else if(['34','35'].includes(p2)){carrier='Telenor PK';carrierColor='#009BDE';confidence='High';}
+      else if(p2==='36'){carrier='Zong';carrierColor='#E4007C';confidence='High';}
+      else{carrier='Jazz / Telenor / Zong';carrierColor='var(--c-accent3)';confidence='Low';}
+    } else if(ctryMatch && ctryMatch.code==='+880'){
+      const local=raw.slice(4); const p2=local.slice(0,2);
+      if(['11','12','13','14','15'].includes(p2)){carrier='Grameenphone';carrierColor='#ED1B24';confidence='High';}
+      else if(['16'].includes(p2)){carrier='Banglalink';carrierColor='#F77F00';confidence='High';}
+      else if(['17'].includes(p2)){carrier='Robi';carrierColor='#FF0000';confidence='High';}
+      else if(['18'].includes(p2)){carrier='Teletalk';carrierColor='#00A651';confidence='High';}
+      else if(['19'].includes(p2)){carrier='Airtel BD';carrierColor='#E8001C';confidence='High';}
+      else{carrier='Grameenphone / Robi / Banglalink';carrierColor='var(--c-accent3)';confidence='Low';}
+    } else if(ctryMatch){
+      carrier='Major local carrier'; carrierColor='var(--c-accent)'; confidence='Low';
     }
+
+    const confColor = confidence==='High'?'var(--c-green)':confidence==='Moderate'?'var(--c-accent3)':'var(--c-muted)';
+    const local = ctryMatch ? raw.slice(ctryMatch.code.length) : raw;
+    const formatted = ctryMatch ? `${ctryMatch.code} ${local.replace(/(\d{5})(\d{5})/,'$1 $2')}` : raw;
+
+    return `<span style="color:var(--c-green)">// Phone analysis complete ✓</span><br><br>
+<span style="color:var(--c-muted)">── Number ──────────────────</span><br>
+<span style="color:var(--c-accent)">📞 ${formatted}</span><br>
+${ctryMatch?`<span style="color:var(--c-accent)">🌍 ${ctryMatch.flag} ${ctryMatch.country}</span>&nbsp;&nbsp;<span style="color:var(--c-muted)">${ctryMatch.region}</span>`:'<span style="color:var(--c-accent2)">🌍 Country unknown — add country code</span>'}<br><br>
+<span style="color:var(--c-muted)">── Carrier (Estimated) ──────</span><br>
+<span style="color:var(--c-accent3)">Provider: <strong style="color:${carrierColor};font-size:13px">${carrier}</strong></span><br>
+<span style="color:var(--c-accent3)">Line Type: <strong style="color:var(--c-green)">MOBILE</strong></span><br>
+<span style="color:var(--c-accent3)">Confidence: <strong style="color:${confColor}">${confidence}</strong></span><br><br>
+<span style="color:rgba(232,232,240,0.2);font-size:10px">// Estimated from number prefix — not a live lookup</span>`;
   },
   domain:(v)=>`<span style="color:var(--c-green)">// Domain OSINT complete for ${v}</span><br><br>
 <span style="color:var(--c-accent)">Registrar: GoDaddy LLC</span><br>
@@ -1584,6 +1678,10 @@ const toolResults={
 <span style="color:var(--c-muted)">Hosting: Cloudflare Inc. · San Francisco, CA</span><br><br>
 <span style="color:var(--c-muted)">Associated breaches: 1 · Subdomains found: 14</span>`
 };
+
+
+/* ── Phone Lookup ── */
+
 
 function runToolScan(type){
   const inputs={username:'usernameInput',phone:'phoneInput',domain:'domainInput'};
