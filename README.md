@@ -171,7 +171,7 @@ This project demonstrates:
 
 ---
 
-# 👨‍💻 Authors
+# 👨‍💻 Produce, Written & Directed By :
 
 Sairaj Khanvilkar(Frontend Developer)
 Harsh Agarwal (Backend Developer)
